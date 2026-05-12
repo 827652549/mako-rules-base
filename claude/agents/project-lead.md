@@ -50,9 +50,9 @@ GITHUB_REPO=$(echo "$GITHUB_REMOTE" | sed -E 's#.*github\.com[:/](.+?)(\.git)?$#
 # Issue 标识符（从 prompt 参数提取，格式 {PREFIX}-{NUMBER}）
 ISSUE_ID="<从 prompt 中提取，如 MAK-301>"
 
-# Worktree 路径（创建在主仓库目录下）
+# Worktree 路径（创建在主仓库的同级目录，不在仓库内部）
 WORKTREE_NAME="${REPO_NAME}-${ISSUE_ID}"
-WORKTREE_PATH="${REPO_ROOT}/${WORKTREE_NAME}"
+WORKTREE_PATH="$(dirname "${REPO_ROOT}")/${WORKTREE_NAME}"
 ```
 
 ### 执行流程

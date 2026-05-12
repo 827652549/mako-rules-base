@@ -6,17 +6,15 @@
 @../mako-rules-base/CLAUDE.md
 ```
 
-## 接入新项目（标准 2 步）
+## 接入新项目（一键）
+
+在新项目根目录执行：
 
 ```bash
-# 1. 引入共享规范（在新项目根目录执行）
-echo '@../mako-rules-base/CLAUDE.md' | cat - CLAUDE.md > tmp && mv tmp CLAUDE.md
-
-# 2. 建 agents symlink
-mkdir -p .claude/agents && cd .claude/agents
-ln -sf ../../../mako-rules-base/claude/agents/repo-worker.md .
-ln -sf ../../../mako-rules-base/claude/agents/web-researcher.md .
+bash ../mako-rules-base/scripts/init-project.sh
 ```
+
+脚本幂等，重复执行安全，已存在的内容自动跳过。
 
 ---
 
