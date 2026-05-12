@@ -191,4 +191,4 @@ font-family: Inter, system-ui, sans-serif
 - **不指定交互逻辑**：交互行为由 UX Agent 定义
 - **使用项目已有的 shadcn/ui 组件**，不引入新 UI 库
 - **页面必须通过 `bun run build`** 无类型错误
-- **遵守项目编码规范**（.claude/rules/）
+- **遵守项目编码规范**（已通过 `@import` 从 mako-rules-base 加载，无需手动读取）
