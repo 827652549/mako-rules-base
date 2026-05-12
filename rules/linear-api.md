@@ -98,3 +98,60 @@ def gql_with_limit(query, variables=None):
 | **单项目完整流程合计** | **~20 次** |
 
 正常使用远低于 2500 次/小时限制。触发限流通常是因为**重复查询或高频 poll**。
+
+## Project 寻址规范
+
+### 问题
+
+Linear issue 需要关联 project 时，不能假设 project ID 已知。正确做法是**按名称动态查询**，而不是硬编码 ID。
+
+### 寻址方式：按 GitHub 仓库名匹配 Project 名称
+
+约定：**Linear project 名称 = GitHub 仓库名**（如 `mako-ai-app-job-analyze`）。
+
+**标准查询流程：**
+
+```python
+# Step 1：列出所有 projects，按名称匹配
+r = gql("query { projects { nodes { id name } } }")
+projects = r["data"]["projects"]["nodes"]
+project = next((p for p in projects if p["name"] == REPO_NAME), None)
+project_id = project["id"] if project else None
+
+# Step 2：创建/更新 issue 时带上 projectId
+gql("mutation($t:String!,$teamId:String!,$projectId:String){issueCreate(input:{title:$t,teamId:$teamId,projectId:$projectId}){success issue{identifier}}}",
+    {"t": title, "teamId": team_id, "projectId": project_id})
+```
+
+**MCP 工具版本：**
+
+```
+# 先查询
+mcp__linear__list_projects() → 找到与 REPO_NAME 同名的 project → 取 id
+
+# 再创建 issue 时传入
+mcp__linear__save_issue(title=..., teamId=..., projectId=project_id)
+```
+
+### 在 Boot Sequence 中的位置
+
+`第零步` 解析环境变量时，同步解析 project ID：
+
+```bash
+# 已有变量
+REPO_NAME=$(basename "$REPO_ROOT")   # = mako-ai-app-job-analyze
+
+# 新增：通过名称匹配获取 Linear project ID
+# (在首次 get_issue 时顺带查 project，避免额外请求)
+PROJECT_ID=$(issue.project.id)       # 从主任务 issue 中直接读取
+```
+
+> **优先从主任务 issue 的 `project.id` 字段读取**（一次 get_issue 即可得到），只有在需要创建新 issue 时才需要单独查询。
+
+### 错误情况处理
+
+| 情况 | 处理 |
+|------|------|
+| project 不存在 | 跳过 projectId，issue 创建在 team 根目录下，并在评论中说明 |
+| project 名称不唯一 | 取第一个匹配项，并在评论中说明 |
+| projects 查询失败（限流）| 不阻塞 issue 创建，projectId 留空，后续补挂 |
