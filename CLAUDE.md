@@ -30,3 +30,4 @@ bash ../mako-rules-base/scripts/init-project.sh
 @rules/nextjs-architecture.md
 @rules/glossary.md
 @rules/faq.md
+@rules/linear-api.md

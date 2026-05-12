@@ -231,6 +231,15 @@ WORKTREE_PATH="$(dirname "${REPO_ROOT}")/${WORKTREE_NAME}"
 
 ## 约束
 
+### Linear API 使用规则（防限流）
+
+- **先读后写**：同一任务内先执行所有 `get_*`/`list_*`，再执行所有 `save_*`，不要读写交替
+- **Mutation 间隔 1 秒**：连续写操作之间必须有 1 秒间隔（MCP 工具已由 settings.json hook 自动处理；直接 HTTP 调用时需手动 `time.sleep(1)`）
+- **会话内缓存**：已读取的 issue 数据直接复用，同一 issue 在同一会话中只调用一次 `get_issue`
+- **禁止 poll Linear API**：不用轮询检查限流是否恢复，每次 poll 本身消耗配额形成恶性循环；遇到 429 则停止，记录待办等 Human 手动触发
+- **降级策略**：MCP 工具不可用时 fallback 到直接 HTTP 调用，但必须遵守以上所有规则
+
+
 - 不直接写代码，代码变更由 repo-worker Agent 完成
 - 不修改 PRD 主体目标
 - 所有状态变更必须通过 Linear MCP 写入并附评论说明

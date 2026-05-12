@@ -1,0 +1,100 @@
+# Linear API 使用规范
+
+## 速率限制
+
+Linear API 限制为 **2500 次请求 / 小时**（滚动窗口，query 和 mutation 均计入）。
+
+## 核心原则
+
+### 1. 先读后写，批量操作
+
+同一任务内，**先执行所有读操作（query），再执行所有写操作（mutation）**。
+不要读写交替，每次切换都消耗额外配额。
+
+```python
+# ❌ 错误：读写交替
+get_issue()       # 1 次
+save_comment()    # 1 次
+get_issue()       # 1 次（重复读）
+save_issue()      # 1 次
+
+# ✅ 正确：先批量读，再批量写
+get_issue()       # 1 次
+list_comments()   # 1 次
+# ... 处理逻辑 ...
+save_comment()    # 1 次
+save_issue()      # 1 次
+```
+
+### 2. Mutation 之间必须间隔 1 秒
+
+Linear 对 mutation 有更严格的 burst 限制。每次写操作后 sleep 1 秒：
+
+```python
+# MCP 工具：settings.json 中的 hook 已自动处理
+# "matcher": "mcp__linear__save_*" → sleep 1
+
+# 直接 HTTP API 调用时，必须手动加间隔
+save_comment(...)
+time.sleep(1)     # 必须
+save_issue(...)
+time.sleep(1)     # 必须
+save_comment(...)
+```
+
+### 3. 会话内缓存，禁止重复查询
+
+同一会话中已读取的 issue 数据**直接复用，不重复调用 `get_issue`**。
+
+```python
+# ❌ 错误
+issue = get_issue("MAK-326")   # 第一次
+# ... 一段时间后 ...
+issue = get_issue("MAK-326")   # 重复，浪费配额
+
+# ✅ 正确：缓存结果，整个会话复用
+issue = get_issue("MAK-326")   # 只调用一次
+team_id = issue.team.id        # 后续直接用变量
+```
+
+### 4. 禁止 poll Linear API
+
+不要用轮询方式检查状态是否恢复。每次 poll 本身也消耗配额，形成恶性循环。
+
+```bash
+# ❌ 错误：poll 检查限流是否恢复（每次都消耗 1 次配额）
+until curl linear-api; do sleep 10; done
+
+# ✅ 正确：固定等待足够长的时间后一次性重试
+sleep 300  # 等 5 分钟，不 poll
+```
+
+### 5. 直接 HTTP 调用时的降级策略
+
+当 MCP 工具不可用而使用直接 HTTP 调用时：
+- 每次 mutation 前 `time.sleep(1)`
+- 遇到 429 错误时，**停止重试，记录待办，等用户手动触发**
+- 不要自动重试 429 — 重试本身也消耗配额
+
+```python
+def gql_with_limit(query, variables=None):
+    payload = ...
+    try:
+        return call_api(payload)
+    except HTTPError as e:
+        if "Rate limit" in e.read().decode():
+            raise RateLimitError("配额耗尽，请稍后手动重试")
+        raise
+```
+
+## 配额估算参考
+
+| 操作场景 | 消耗次数 |
+|---------|---------|
+| Boot Sequence（读 issue + 读评论） | 2 次 |
+| research-phase（写 5 条评论 + 创建 5 个子任务 + 更新状态） | ~11 次 |
+| 开发阶段（更新子任务状态 × N + 更新主任务） | N+1 次 |
+| 发布收尾（写评论 + 更新状态 + 更新标题） | 3 次 |
+| **单项目完整流程合计** | **~20 次** |
+
+正常使用远低于 2500 次/小时限制。触发限流通常是因为**重复查询或高频 poll**。
