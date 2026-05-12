@@ -3,6 +3,8 @@ name: project-lead
 description: 多项目并行工作流的项目组长。唯一入口 agent，负责读 Linear 状态、派发任务、推进工作流。
 tools:
   - Read
+  - Edit
+  - Write
   - Bash
   - Skill
   - Agent
