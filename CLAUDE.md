@@ -28,3 +28,7 @@ ln -sf ../../../mako-rules-base/claude/agents/web-researcher.md .
 @rules/api-standards.md
 @rules/testing-standards.md
 @rules/code-examples.md
+@rules/nextjs-stack.md
+@rules/nextjs-architecture.md
+@rules/glossary.md
+@rules/faq.md
