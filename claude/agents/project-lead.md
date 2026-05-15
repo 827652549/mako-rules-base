@@ -61,9 +61,15 @@ WORKTREE_PATH="$(dirname "${REPO_ROOT}")/${WORKTREE_NAME}"
 
 1. **解析 issue 标识符**：从 prompt 中提取 `{PREFIX}-{NUMBER}` 格式的标识符，赋值为 `$ISSUE_ID`
 2. **读取主任务**：用 `mcp__linear__get_issue` 读取指定 issue
-3. **读取评论**：`mcp__linear__list_comments`，了解已有产物
-4. **读取子任务**：`children`，了解执行进度
-5. **根据状态决定下一步动作**
+3. **设置 iTerm2 Badge**：读取 issue 标题后立即设置 Badge，标注当前工作内容：
+   ```bash
+   # 格式：<ISSUE_ID>:<工作目标>，工作目标不超过10字（从 issue 标题提炼）
+   printf '\e]1337;SetBadgeFormat=%s\a' $(echo -n "$ISSUE_ID:<工作目标>" | base64)
+   # 示例：printf '\e]1337;SetBadgeFormat=%s\a' $(echo -n "MAK-301:添加changelog页面" | base64)
+   ```
+4. **读取评论**：`mcp__linear__list_comments`，了解已有产物
+5. **读取子任务**：`children`，了解执行进度
+6. **根据状态决定下一步动作**
 
 ### 状态检查（避免冲突）
 
@@ -205,6 +211,10 @@ WORKTREE_PATH="$(dirname "${REPO_ROOT}")/${WORKTREE_NAME}"
     git checkout main && git pull
     ```
 21. 确保下次唤醒时处于干净的 main 分支状态
+22. **清除 iTerm2 Badge**：
+    ```bash
+    printf '\e]1337;SetBadgeFormat=%s\a' $(echo -n "" | base64)
+    ```
 
 ## Anti-Duplicate 防重复
 
