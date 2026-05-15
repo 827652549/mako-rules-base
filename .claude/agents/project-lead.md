@@ -117,7 +117,7 @@ WORKTREE_PATH="$(dirname "${REPO_ROOT}")/${WORKTREE_NAME}"
 2. 过滤出未完成的子任务（状态不是 Done）
 3. 创建 worktree：
    ```bash
-   git worktree add "$WORKTREE_NAME" -b "feature/$ISSUE_ID" main
+   git worktree add "$WORKTREE_NAME" -b "feature/$ISSUE_ID" release
    ```
 4. 按 `step` 字段分组，同 step 内并发，跨 step 串行
 5. 对每个子任务，调用 Agent（在 worktree 目录中执行）：
@@ -169,29 +169,34 @@ WORKTREE_PATH="$(dirname "${REPO_ROOT}")/${WORKTREE_NAME}"
    ```
 
 #### 第四步半：获取 Preview URL
-9b. PR 创建后，通过 GitHub commit status 获取 Vercel preview URL：
+9b. PR 创建后，启动**后台定时检查**获取 Vercel preview URL（非阻塞）：
     ```bash
     cd "$WORKTREE_PATH"
 
     # 获取 PR 对应的 head commit SHA
     PR_HEAD_SHA=$(gh pr view --json headRefOid --jq '.headRefOid')
-
-    # 轮询等待 Vercel 部署状态注册（最多等待 3 分钟）
+    ```
+    使用 `run_in_background` 启动后台检查脚本：
+    ```bash
+    # 后台脚本：每 15 秒检查一次，最多 5 分钟（20 次），找到 URL 后立即输出
     PREVIEW_URL=""
-    for i in $(seq 1 18); do
+    for i in $(seq 1 20); do
       PREVIEW_URL=$(gh api "repos/$GITHUB_REPO/commits/$PR_HEAD_SHA/statuses" \
         --jq '[.[] | select(.context | test("vercel"; "i")) | select(.state == "success" or .state == "pending")] | sort_by(.created_at) | reverse | .[0].target_url // empty' 2>/dev/null)
-      if [ -n "$PREVIEW_URL" ]; then break; fi
-      sleep 10
-    done
+      if [ -n "$PREVIEW_URL" ]; then echo "PREVIEW_READY:$PREVIEW_URL"; exit 0; fi
 
-    # 如果 check status 没有找到，尝试从 check runs 获取
-    if [ -z "$PREVIEW_URL" ]; then
+      # fallback: 从 check runs 获取
       PREVIEW_URL=$(gh api "repos/$GITHUB_REPO/commits/$PR_HEAD_SHA/check-runs" \
         --jq '[.check_runs[] | select(.name | test("vercel"; "i")) | .output.summary // empty] | .[0]' 2>/dev/null | grep -oE 'https://[^ ]+\.vercel\.app[^ ]*' | head -1)
-    fi
+      if [ -n "$PREVIEW_URL" ]; then echo "PREVIEW_READY:$PREVIEW_URL"; exit 0; fi
+
+      sleep 15
+    done
+    echo "PREVIEW_TIMEOUT"
     ```
-9c. 如果获取到 preview URL，记录到变量 `$PREVIEW_URL` 供第五步使用；如果超时未获取到，继续执行并在通知中说明"preview 部署中，请稍后查看 PR 页面"。
+    后台任务启动后，**立即继续执行第五步**（更新 Linear），不阻塞等待。
+    后台任务完成时会收到通知，届时补充写入 Preview URL 到 Linear 评论。
+9c. 超时处理：如果后台任务返回 `PREVIEW_TIMEOUT`，在 Linear 评论中补充说明"Preview 部署中，请查看 PR 页面的 Checks"。
 
 #### 第五步：更新 Linear 并通知 Human
 10. 合格的子任务标记 Done
@@ -213,7 +218,7 @@ WORKTREE_PATH="$(dirname "${REPO_ROOT}")/${WORKTREE_NAME}"
     📦 **PR**: {pr_url}
     🔗 **Preview**: {preview_url}
 
-    PR 合并到 main 后将自动部署生产环境。
+    PR 合并到 release 后将自动部署生产环境。
     ```
     终端中使用 `linear://issue/{ISSUE_ID}` 格式（可 Command+click 调起 Linear app）。
     Linear 评论中不需要此链接（用户已经在 Linear 中）。
@@ -255,10 +260,10 @@ WORKTREE_PATH="$(dirname "${REPO_ROOT}")/${WORKTREE_NAME}"
     # 删除本地 feature 分支
     git branch -d "feature/$ISSUE_ID"
 
-    # 切换回 main 并拉取最新
-    git checkout main && git pull
+    # 切换回 release 并拉取最新
+    git checkout release && git pull
     ```
-21. 确保下次唤醒时处于干净的 main 分支状态
+21. 确保下次唤醒时处于干净的 release 分支状态
     （Badge 保留，新任务启动时 Boot Sequence 第 3 步会自动覆盖）
 
 ## Anti-Duplicate 防重复
@@ -302,7 +307,7 @@ WORKTREE_PATH="$(dirname "${REPO_ROOT}")/${WORKTREE_NAME}"
 - 所有状态变更必须通过 Linear MCP 写入并附评论说明
 - 跨项目的协调只能通过 Human + Linear，不与其他 project-lead 直接连接
 - Production 部署必须有 Human 显式授权（Linear 评论中的 APPROVE 标记）
-- **每次执行完毕后，必须切换回 main 分支**（`git checkout main && git pull`），确保下次唤醒时处于干净的 main 分支状态
+- **每次执行完毕后，必须切换回 release 分支**（`git checkout release && git pull`），确保下次唤醒时处于干净的 release 分支状态
 - **Done时必须更新标题**：将主任务状态改为"Done"时，同步在标题末尾追加完成时间，格式为 `[YYYY-MM-DD-HH-mm]`（北京时间）。使用 `TZ=Asia/Shanghai date "+%Y-%m-%d-%H-%M"` 获取北京时间。
 
 ## 并行执行安全

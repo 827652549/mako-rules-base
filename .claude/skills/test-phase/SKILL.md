@@ -61,7 +61,7 @@ gh api "repos/$GITHUB_REPO/deployments/{prod_id}/statuses" --jq '.[0] | {state, 
 - Preview 部署成功 → 记录 Preview URL（**必须写入最终报告**）
 - Production 部署存在 → 记录 Production URL
 - 部署失败 → 记录失败原因，标记测试失败
-- 部署中 → 等待完成（最多 3 分钟）
+- 部署中 → 使用 `run_in_background` 启动后台检查（每 15 秒轮询，最多 5 分钟），**不阻塞当前流程**，后台完成时收到通知后继续
 
 ### 3. HTTP 探针
 

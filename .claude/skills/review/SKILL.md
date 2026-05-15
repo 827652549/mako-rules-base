@@ -17,8 +17,8 @@ allowed-tools:
 ### 1. 收集变更
 
 ```bash
-git diff main...HEAD --stat
-git diff main...HEAD
+git diff release...HEAD --stat
+git diff release...HEAD
 ```
 
 - 列出所有变更文件

@@ -1,6 +1,6 @@
 ---
 name: release-phase
-description: 发布阶段。合并 PR 到 main，触发 Vercel 自动部署，含并行审查流水线，需 Human 显式授权。
+description: 发布阶段。合并 PR 到 release，触发 Vercel 自动部署，含并行审查流水线，需 Human 显式授权。
 context: fork
 user-invocable: false
 allowed-tools:
@@ -90,15 +90,27 @@ gh pr merge {pr_url} --merge --delete-branch
 
 ### 5. 验证部署
 
-等待 Vercel Production 部署完成：
+使用 `run_in_background` 启动**后台部署检查**（非阻塞）：
 
 ```bash
-vercel ls {project_name} 2>&1 | head -5
+# 后台脚本：每 15 秒检查一次，最多 5 分钟（20 次）
+for i in $(seq 1 20); do
+  DEPLOY_STATUS=$(vercel ls {project_name} 2>&1 | head -5)
+  if echo "$DEPLOY_STATUS" | grep -q "● Ready"; then
+    echo "PROD_DEPLOY_READY"
+    exit 0
+  fi
+  sleep 15
+done
+echo "PROD_DEPLOY_TIMEOUT"
 ```
 
+后台任务启动后，**立即继续后续步骤**（记录 CHANGELOG 等），不阻塞等待。
+后台完成时收到通知后：
 - 确认最新部署状态为 `● Ready`
 - 确认环境为 `Production`
 - 确认无构建错误
+- 超时则输出"⏳ 生产部署超时，请手动检查 Vercel 部署状态"
 
 ### 6. 记录 CHANGELOG
 

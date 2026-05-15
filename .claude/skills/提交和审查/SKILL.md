@@ -48,21 +48,35 @@ description: "代码提交、部署验证、报告生成的标准化审查流程
 
 7. 推送到远程：`git push origin <当前分支>`
    - 推送完成后向用户输出：`📤 已推送到 {当前分支} 分支`
-   - 如为 feature 分支：提示"PR 合并到 main 后将自动部署生产环境"
-   - 如为 main 分支：提示"已推送到 main，将自动触发生产环境部署"
+   - 如为 feature 分支：提示"PR 合并到 release 后将自动部署生产环境"
+   - 如为 release 分支：提示"已推送到 release，将自动触发生产环境部署"
 
 ### 步骤 3：Vercel 部署验证
 
-1. 通过 Vercel MCP 或 `gh` CLI 检查 Vercel 部署状态
-2. 等待 Vercel 部署完成（轮询检查，每次间隔 15 秒，最长等待 5 分钟）
-3. 部署完成后，使用 `mcp__chrome-devtools__navigate_page` 导航到 Vercel 页面验证：
+1. 推送完成后，使用 `run_in_background` 启动**后台部署检查**（非阻塞）：
+   ```bash
+   # 后台脚本：每 15 秒检查一次，最多 5 分钟（20 次）
+   for i in $(seq 1 20); do
+     DEPLOY_STATUS=$(gh api "repos/$GITHUB_REPO/deployments?per_page=1" --jq '.[0].state' 2>/dev/null)
+     if [ "$DEPLOY_STATUS" = "success" ]; then
+       DEPLOY_URL=$(gh api "repos/$GITHUB_REPO/deployments?per_page=1/statuses" --jq '.[0].target_url' 2>/dev/null)
+       echo "DEPLOY_READY:$DEPLOY_URL"
+       exit 0
+     fi
+     sleep 15
+   done
+   echo "DEPLOY_TIMEOUT"
+   ```
+   后台任务启动后，**立即继续后续步骤**（更新 changelog 等），不阻塞等待。
+2. 后台任务完成时收到通知后，使用 `mcp__chrome-devtools__navigate_page` 导航到 Vercel 页面验证：
    - 首页是否正常加载
    - 本次变更相关页面是否正常
-4. 如果页面访问异常：
+3. 如果页面访问异常：
    - 排查问题（查看 Vercel 日志、浏览器控制台错误）
    - 修复代码
    - 重新提交、推送，回到步骤 3
    - 直到页面正常为止
+4. 超时处理：如果返回 `DEPLOY_TIMEOUT`，向用户输出"⏳ 部署超时，请手动检查 Vercel 部署状态"
 
 ### 步骤 4：更新 Changelog（仅 changelog.md）
 
