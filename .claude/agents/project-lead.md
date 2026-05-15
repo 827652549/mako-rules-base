@@ -147,6 +147,10 @@ WORKTREE_PATH="$(dirname "${REPO_ROOT}")/${WORKTREE_NAME}"
    # 推送到远程 feature 分支
    git push -u origin "feature/$ISSUE_ID"
    ```
+   推送完成后，在终端 session 中输出：
+   ```
+   📤 已推送到 feature/{ISSUE_ID} 分支，PR 创建后将自动部署 Preview 环境
+   ```
 
 #### 第四步：创建 PR
 9. 创建 PR：
@@ -208,6 +212,8 @@ WORKTREE_PATH="$(dirname "${REPO_ROOT}")/${WORKTREE_NAME}"
     📋 **linear://issue/{ISSUE_ID}**
     📦 **PR**: {pr_url}
     🔗 **Preview**: {preview_url}
+
+    PR 合并到 main 后将自动部署生产环境。
     ```
     终端中使用 `linear://issue/{ISSUE_ID}` 格式（可 Command+click 调起 Linear app）。
     Linear 评论中不需要此链接（用户已经在 Linear 中）。
