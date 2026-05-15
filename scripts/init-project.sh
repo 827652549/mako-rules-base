@@ -154,18 +154,31 @@ PYEOF
 # 7. 注册到 PROJECTS.md
 PROJECTS_FILE="$RULES_BASE/PROJECTS.md"
 TODAY="$(date +%Y-%m-%d)"
+REPO_NAME="$(basename "$PROJECT_PATH")"
+LINEAR_PROJ="${LINEAR_PROJECT:-$(cat "$PROJECT_PATH/.claude/linear-project.json" 2>/dev/null | python3 -c "import sys,json;print(json.load(sys.stdin).get('project',''))" 2>/dev/null || echo "")}"
 if [ ! -f "$PROJECTS_FILE" ]; then
-  echo "# 依赖项目列表" > "$PROJECTS_FILE"
-  echo "" >> "$PROJECTS_FILE"
-  echo "由 \`init-project.sh\` 自动维护，手动编辑亦可。" >> "$PROJECTS_FILE"
-  echo "" >> "$PROJECTS_FILE"
-  echo "| 项目路径 | 注册时间 |" >> "$PROJECTS_FILE"
-  echo "|---------|---------|" >> "$PROJECTS_FILE"
+  cat > "$PROJECTS_FILE" << 'HEADER'
+# 项目总览
+
+各项目注册信息与关系说明。`init-project.sh` 自动维护注册部分，关系部分随手手动更新。
+
+---
+
+HEADER
 fi
 if grep -qF "$PROJECT_PATH" "$PROJECTS_FILE"; then
   echo "[7/7] PROJECTS.md 已包含本项目，跳过"
 else
-  echo "| $PROJECT_PATH | $TODAY |" >> "$PROJECTS_FILE"
+  cat >> "$PROJECTS_FILE" << EOF
+
+## $REPO_NAME
+- **路径**: $PROJECT_PATH
+- **Linear**: ${LINEAR_PROJ:-待设置}
+- **注册时间**: $TODAY
+- **说明**: 待补充
+- **关系**: 待补充
+
+EOF
   echo "[7/7] 已注册到 PROJECTS.md"
 fi
 
