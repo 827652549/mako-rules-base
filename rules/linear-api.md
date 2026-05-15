@@ -160,11 +160,10 @@ PROJECT_ID=$(issue.project.id)       # 从主任务 issue 中直接读取
 
 ### Linear 链接格式
 
-向用户输出 Linear issue 链接时，使用 `linear://` URL scheme，这样 Command+click 可直接调起 Linear Mac 应用：
+**Claude Code 终端 session 中**（用户可 Command+click）：
+- 使用 `linear://issue/{ISSUE_IDENTIFIER}` 格式，直接调起 Linear Mac 应用
+- 示例：`linear://issue/MAK-366`
+- **不要使用** `https://linear.app/...` 格式（会打开浏览器而非 Linear app）
 
-```
-linear://issue/{ISSUE_IDENTIFIER}
-# 示例：linear://issue/MAK-366
-```
-
-**不要使用** `https://linear.app/...` 格式，该格式 Command+click 会打开浏览器而非 Linear app。
+**Linear 评论中**（用户已经在 Linear 里）：
+- 不需要输出 Linear 链接，只输出 PR / Preview / Production 等外部链接

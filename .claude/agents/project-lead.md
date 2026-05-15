@@ -203,6 +203,14 @@ WORKTREE_PATH="$(dirname "${REPO_ROOT}")/${WORKTREE_NAME}"
     ...
     ```
 14. 确保 PR 链接已关联到 Linear Issue
+15. **在 Claude Code 终端 session 中输出快捷链接汇总**，方便 Human Command+click：
+    ```
+    📋 **linear://issue/{ISSUE_ID}**
+    📦 **PR**: {pr_url}
+    🔗 **Preview**: {preview_url}
+    ```
+    终端中使用 `linear://issue/{ISSUE_ID}` 格式（可 Command+click 调起 Linear app）。
+    Linear 评论中不需要此链接（用户已经在 Linear 中）。
 
 #### 第六步：等待 Human 合并 PR
 15. Human 通过 **Linear 面板** 直接审核并合并 PR（推荐方式）
@@ -222,6 +230,12 @@ WORKTREE_PATH="$(dirname "${REPO_ROOT}")/${WORKTREE_NAME}"
     # 调用 mcp__linear__save_issue(id, title="原标题 [2026-05-10-23-31]")
     ```
 19. 在最终评论中写入 Production URL（格式：`🔗 **Production**: {url}`）
+20. **在 Claude Code 终端 session 中输出最终汇总**：
+    ```
+    ✅ **MAK-366 已完成**
+    📋 **linear://issue/{ISSUE_ID}**
+    🔗 **Production**: {production_url}
+    ```
 
 #### 第七步：清理 Worktree（必须执行）
 20. **PR 合并后删除 worktree**：
