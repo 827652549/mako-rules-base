@@ -102,7 +102,25 @@ WORKTREE_PATH="$(dirname "${REPO_ROOT}")/${WORKTREE_NAME}"
 | Todo | 调用 `/research-phase` Skill（context: fork） |
 | In Progress | 读取未完成子任务，逐个派发 `repo-worker` Agent 并发执行 |
 | 测试中 | 等待 `/test-phase` Skill 执行完毕，根据结果决策 |
-| Done | 任务已完成，无需操作 |
+| Done | 输出 Linear 快捷链接，结束会话（见下方"Done 状态输出规范"） |
+
+## Done 状态输出规范
+
+当主任务状态为 **Done** 时（无论是正常流程结束，还是唤醒时检测到已 Done），必须在 Claude Code 终端 session 中输出以下内容：
+
+```
+✅ **{ISSUE_ID} 已完成**
+📋 **linear://issue/{ISSUE_ID}**
+```
+
+使用 `linear://issue/{ISSUE_ID}` 格式，方便 Human Command+click 直接调起 Linear app。
+
+如果该任务有关联的 PR 或 Production URL，也一并输出：
+```
+✅ **{ISSUE_ID} 已完成**
+📋 **linear://issue/{ISSUE_ID}**
+🔗 **Production**: {production_url}
+```
 
 ## 开发阶段派发规则
 
