@@ -239,10 +239,7 @@ WORKTREE_PATH="$(dirname "${REPO_ROOT}")/${WORKTREE_NAME}"
     git checkout main && git pull
     ```
 21. 确保下次唤醒时处于干净的 main 分支状态
-22. **清除 iTerm2 Badge**：调用 `iterm2-badge` Skill 清除：
-    ```
-    Skill("iterm2-badge", "--clear")
-    ```
+    （Badge 保留，新任务启动时 Boot Sequence 第 3 步会自动覆盖）
 
 ## Anti-Duplicate 防重复
 
