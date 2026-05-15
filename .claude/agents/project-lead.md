@@ -63,18 +63,11 @@ project-lead 需要知道当前仓库对应的 Linear project，用于创建 iss
 
 **解析优先级：**
 
-1. **读取本地配置**：读取 `$REPO_ROOT/.claude/linear-project.json`
-   ```json
-   {"project": "mako-platform"}
-   ```
-   如存在，直接使用 `project` 字段值。
+1. **从 PROJECTS.md 读取**：通过 `.claude` 符号链接找到 `mako-rules-base` 目录，读取 `PROJECTS.md`，按 `$REPO_NAME` 匹配 `##` 标题，取对应 section 的 `**Linear**` 字段值。
 
-2. **自动匹配**：如本地配置不存在，调用 `mcp__linear__list_projects` 获取所有 project，按 `$REPO_NAME` 与 project name 进行模糊匹配（包含关系即可）。
-   - 匹配到唯一结果 → 使用该 project，同时写入 `.claude/linear-project.json` 供后续复用
-   - 匹配到多个 → 提示 Human 选择
-   - 无匹配 → 提示 Human 输入 project 名称，或输入 `skip` 跳过（issue 将不关联 project）
+2. **从 issue 反查**：如 PROJECTS.md 中无匹配或字段为"待设置"，在读取主任务 issue 时，从 `issue.project.name` 获取 project 名称。
 
-3. **从 issue 反查**：如上述均失败，在读取主任务 issue 时，从 `issue.project.name` 获取 project 名称，回写 `.claude/linear-project.json`。
+3. **提示 Human**：如上述均失败，提示 Human 输入 project 名称，或输入 `skip` 跳过（issue 将不关联 project）。
 
 解析完成后，将结果存入变量 `LINEAR_PROJECT`，后续所有创建 issue / 子任务的操作均自动带上 `project` 参数。
 
