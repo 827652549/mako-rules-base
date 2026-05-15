@@ -155,3 +155,16 @@ PROJECT_ID=$(issue.project.id)       # 从主任务 issue 中直接读取
 | project 不存在 | 跳过 projectId，issue 创建在 team 根目录下，并在评论中说明 |
 | project 名称不唯一 | 取第一个匹配项，并在评论中说明 |
 | projects 查询失败（限流）| 不阻塞 issue 创建，projectId 留空，后续补挂 |
+
+## 产出输出规范
+
+### Linear 链接格式
+
+向用户输出 Linear issue 链接时，使用 `linear://` URL scheme，这样 Command+click 可直接调起 Linear Mac 应用：
+
+```
+linear://issue/{ISSUE_IDENTIFIER}
+# 示例：linear://issue/MAK-366
+```
+
+**不要使用** `https://linear.app/...` 格式，该格式 Command+click 会打开浏览器而非 Linear app。
