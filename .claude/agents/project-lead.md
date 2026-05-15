@@ -257,7 +257,17 @@ project-lead 需要知道当前仓库对应的 Linear project，用于创建 iss
 
 #### 第六步：等待 Human 合并 PR
 15. Human 通过 **Linear 面板** 直接审核并合并 PR（推荐方式）
-16. 合并后通过 GitHub API 获取 Production 部署状态和 URL：
+16. **⚠️ 合并验证门控（强制）**：在执行任何后续操作（获取 Production 部署、标记 Done）之前，**必须**通过 GitHub API 验证 PR 确实已被合并：
+    ```bash
+    # 检查 PR 合并状态（$GITHUB_REPO 已在第零步解析）
+    PR_STATE=$(gh pr view "feature/$ISSUE_ID" --json state --jq '.state')
+    # 必须为 "MERGED"，否则中止后续流程
+    ```
+    - 如 `state == "MERGED"` → 继续下一步
+    - 如 `state == "OPEN"` → **停止**，输出提示 `⏳ PR 尚未合并，等待 Human 在 Linear/GitHub 中合并 PR`，然后结束会话
+    - 如 `state == "CLOSED"`（未合并即关闭）→ **停止**，输出提示 `⚠️ PR 已关闭但未合并，请 Human 确认意图`
+    - **严禁跳过此验证直接标记 Done**
+17. 验证通过后，通过 GitHub API 获取 Production 部署状态和 URL：
     ```bash
     # 获取最新 Production 部署（$GITHUB_REPO 已在第零步解析）
     gh api "repos/$GITHUB_REPO/deployments?per_page=3" --jq '.[] | select(.environment=="Production") | {id, ref, created_at}' | head -5
@@ -265,15 +275,15 @@ project-lead 需要知道当前仓库对应的 Linear project，用于创建 iss
     # 获取部署状态和 URL
     gh api "repos/$GITHUB_REPO/deployments/{id}/statuses" --jq '.[0] | {state, target_url}'
     ```
-17. 验收通过后，将主任务状态改为"Done"
-18. **更新标题追加完成时间**：获取北京时间并追加到标题末尾
+18. 验收通过后，将主任务状态改为"Done"
+19. **更新标题追加完成时间**：获取北京时间并追加到标题末尾
     ```bash
     TZ=Asia/Shanghai date "+%Y-%m-%d-%H-%M"
     # 输出示例: 2026-05-10-23-31
     # 调用 mcp__linear__save_issue(id, title="原标题 [2026-05-10-23-31]")
     ```
-19. 在最终评论中写入 Production URL（格式：`🔗 **Production**: {url}`）
-20. **在 Claude Code 终端 session 中输出最终汇总**：
+20. 在最终评论中写入 Production URL（格式：`🔗 **Production**: {url}`）
+21. **在 Claude Code 终端 session 中输出最终汇总**：
     ```
     ✅ **MAK-366 已完成**
     📋 **linear://issue/{ISSUE_ID}**
@@ -281,7 +291,7 @@ project-lead 需要知道当前仓库对应的 Linear project，用于创建 iss
     ```
 
 #### 第七步：清理 Worktree（必须执行）
-20. **PR 合并后删除 worktree**：
+22. **PR 合并后删除 worktree**：
     ```bash
     # 切回主仓库
     cd "$REPO_ROOT"
@@ -295,7 +305,7 @@ project-lead 需要知道当前仓库对应的 Linear project，用于创建 iss
     # 切换回 release 并拉取最新
     git checkout release && git pull
     ```
-21. 确保下次唤醒时处于干净的 release 分支状态
+23. 确保下次唤醒时处于干净的 release 分支状态
     （Badge 保留，新任务启动时 Boot Sequence 第 3 步会自动覆盖）
 
 ## Anti-Duplicate 防重复
@@ -322,6 +332,16 @@ project-lead 需要知道当前仓库对应的 Linear project，用于创建 iss
 - **Human 通过 Linear 面板直接合并 PR**（推荐方式，利用 Linear ↔ GitHub 集成）
 - Human 也可通过 GitHub UI 或 `gh pr merge` 合并
 - 违反此规则 = 严重事故
+
+## ⛔ Done 前 PR 合并验证门控
+
+**标记 Done 之前，必须通过 `gh pr view` 验证 PR 状态为 `MERGED`。未验证或验证未通过，禁止执行任何 Done 操作（状态变更、标题追加、清理 worktree）。**
+
+- 验证命令：`gh pr view "feature/$ISSUE_ID" --json state --jq '.state'`
+- 仅 `MERGED` 状态允许继续
+- `OPEN` → 停止并提示 Human 合并
+- `CLOSED`（未合并）→ 停止并提示 Human 确认
+- 违反此规则（跳过验证直接标记 Done）= 严重事故
 
 ## 约束
 
