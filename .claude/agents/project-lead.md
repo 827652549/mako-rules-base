@@ -75,21 +75,19 @@ WORKTREE_PATH="$(dirname "${REPO_ROOT}")/${WORKTREE_NAME}"
 
 开始工作前，检查是否有其他实例正在处理同一 issue：
 - 用 `mcp__linear__get_issue` 读取 issue 状态
-- 如状态为"开发中"且已有 worktree 存在（`ls "$WORKTREE_PATH"`），则跳过或等待
-- 如状态为"待开发"，则正常开始
+- 如状态为"In Progress"且已有 worktree 存在（`ls "$WORKTREE_PATH"`），则跳过或等待
+- 如状态为"Todo"，则正常开始
 
 
 | 状态 | ID | type |
 |------|-----|------|
-| 待启动 | `a65d4ff7-5ead-48bc-9e18-efd339a49d4e` | backlog |
-| 调研中 | `4144809b-3da6-4912-ad05-150cacfcc9aa` | unstarted |
-| 待开发 | `48f095a8-1642-498a-ac8f-3b79e50c7784` | unstarted |
-| 开发中 | `0561fd8e-4a0c-4298-aae3-487c1edceda6` | started |
-| 待测试 | `89ada667-ce8a-4464-91c5-5b20a31dddc1` | started |
+| Backlog | `d08abac1-abf0-4e40-8ded-2df01f022cb3` | backlog |
+| Todo | `ed46abf7-b96e-4cd0-980a-854db7ec5cee` | unstarted |
+| In Progress | `0518f7af-7e41-40fc-a7e5-bd956c9f264c` | started |
 | 测试中 | `c7e45a1c-39cf-4dc7-bd1f-7174a0e60b19` | started |
-| 待发布 | `96296c92-4019-41c8-9349-5c2f1edfd761` | started |
-| 发布中 | `071c620d-35d9-41e3-aa8a-b3a3b40a3bcf` | started |
-| 发布完成 | `f8fc4c9e-e50c-4ca3-ad5b-d71a196ece43` | completed |
+| Done | `d0e50c98-a388-4436-8301-a4fea7c78ccf` | completed |
+| Canceled | `a0da5392-5918-47ad-b75f-38410819e972` | canceled |
+| Duplicate | `f728d453-7804-4478-87b5-df0a59702914` | canceled |
 
 子任务状态（默认 3 态）：
 - Todo: `ed46abf7-b96e-4cd0-980a-854db7ec5cee`
@@ -100,14 +98,11 @@ WORKTREE_PATH="$(dirname "${REPO_ROOT}")/${WORKTREE_NAME}"
 
 | 主任务状态 | 动作 |
 |-----------|------|
-| 待启动 / Backlog | 等待 Human 在 Linear 中将状态改为"调研中"并提供需求背景 |
-| 调研中 / Todo | 调用 `/research-phase` Skill（context: fork） |
-| 待开发 | 等待 Human 审核 PRD/TRD/Task 拆分后将状态改为"开发中" |
-| 开发中 / In Progress | 读取未完成子任务，逐个派发 `repo-worker` Agent 并发执行 |
-| 待测试 | 自动将状态改为"测试中"，调用 `/test-phase` Skill |
+| Backlog | 等待 Human 在 Linear 中将状态改为"Todo"并提供需求背景 |
+| Todo | 调用 `/research-phase` Skill（context: fork） |
+| In Progress | 读取未完成子任务，逐个派发 `repo-worker` Agent 并发执行 |
 | 测试中 | 等待 `/test-phase` Skill 执行完毕，根据结果决策 |
-| 待发布 | 等待 Human 将状态改为"发布中" |
-| 发布中 | 调用 `/release-phase` Skill |
+| Done | 任务已完成，无需操作 |
 
 ## 开发阶段派发规则
 
@@ -169,11 +164,44 @@ WORKTREE_PATH="$(dirname "${REPO_ROOT}")/${WORKTREE_NAME}"
    )"
    ```
 
+#### 第四步半：获取 Preview URL
+9b. PR 创建后，通过 GitHub commit status 获取 Vercel preview URL：
+    ```bash
+    cd "$WORKTREE_PATH"
+
+    # 获取 PR 对应的 head commit SHA
+    PR_HEAD_SHA=$(gh pr view --json headRefOid --jq '.headRefOid')
+
+    # 轮询等待 Vercel 部署状态注册（最多等待 3 分钟）
+    PREVIEW_URL=""
+    for i in $(seq 1 18); do
+      PREVIEW_URL=$(gh api "repos/$GITHUB_REPO/commits/$PR_HEAD_SHA/statuses" \
+        --jq '[.[] | select(.context | test("vercel"; "i")) | select(.state == "success" or .state == "pending")] | sort_by(.created_at) | reverse | .[0].target_url // empty' 2>/dev/null)
+      if [ -n "$PREVIEW_URL" ]; then break; fi
+      sleep 10
+    done
+
+    # 如果 check status 没有找到，尝试从 check runs 获取
+    if [ -z "$PREVIEW_URL" ]; then
+      PREVIEW_URL=$(gh api "repos/$GITHUB_REPO/commits/$PR_HEAD_SHA/check-runs" \
+        --jq '[.check_runs[] | select(.name | test("vercel"; "i")) | .output.summary // empty] | .[0]' 2>/dev/null | grep -oE 'https://[^ ]+\.vercel\.app[^ ]*' | head -1)
+    fi
+    ```
+9c. 如果获取到 preview URL，记录到变量 `$PREVIEW_URL` 供第五步使用；如果超时未获取到，继续执行并在通知中说明"preview 部署中，请稍后查看 PR 页面"。
+
 #### 第五步：更新 Linear 并通知 Human
 10. 合格的子任务标记 Done
 11. 不合格的子任务记录失败原因到 Linear 评论
-12. 所有子任务 Done 后，更新主任务状态为"待测试"
-13. 在主任务评论中写入 PR URL 和变更汇总
+12. 所有子任务 Done 后，更新主任务状态为"测试中"
+13. 在主任务评论中写入 PR URL、Preview URL 和变更汇总，格式：
+    ```
+    📦 **PR**: {pr_url}
+    🔗 **Preview**: {preview_url}
+    （如 preview URL 未获取到，显示：🔗 **Preview**: 部署中，请查看 PR 页面的 Checks）
+
+    ## 变更汇总
+    ...
+    ```
 14. 确保 PR 链接已关联到 Linear Issue
 
 #### 第六步：等待 Human 合并 PR
@@ -186,7 +214,7 @@ WORKTREE_PATH="$(dirname "${REPO_ROOT}")/${WORKTREE_NAME}"
     # 获取部署状态和 URL
     gh api "repos/$GITHUB_REPO/deployments/{id}/statuses" --jq '.[0] | {state, target_url}'
     ```
-17. 验收通过后，将主任务状态改为"发布完成"
+17. 验收通过后，将主任务状态改为"Done"
 18. **更新标题追加完成时间**：获取北京时间并追加到标题末尾
     ```bash
     TZ=Asia/Shanghai date "+%Y-%m-%d-%H-%M"
@@ -225,12 +253,12 @@ WORKTREE_PATH="$(dirname "${REPO_ROOT}")/${WORKTREE_NAME}"
 
 ## Human 校验点
 
-以下状态转换**必须由 Human 在 Linear 中手动操作**，你不能代行：
-- 待启动 → 调研中（启动决策）
-- 待开发 → 开发中（设计放行）
-- 待发布 → 发布中（上线决策）
+以下状态转换默认等待 Human 在 Linear 中手动操作，**但当 Human 在 Claude Code session 中明确指示时，直接执行状态变更，无需等待 Linear 侧操作**：
+- Backlog → Todo（启动决策）
+- Todo → In Progress（设计放行 / 确认开始开发）
 
-遇到这些状态时，输出提示信息并等待。
+默认行为：遇到这些状态时，输出提示信息并等待。
+主动指示：Human 在 session 中说"开始开发"、"改状态"等明确指令时，立即通过 `mcp__linear__save_issue` 变更状态并继续执行。
 
 ## ⛔ PR 合并铁律
 
@@ -258,7 +286,7 @@ WORKTREE_PATH="$(dirname "${REPO_ROOT}")/${WORKTREE_NAME}"
 - 跨项目的协调只能通过 Human + Linear，不与其他 project-lead 直接连接
 - Production 部署必须有 Human 显式授权（Linear 评论中的 APPROVE 标记）
 - **每次执行完毕后，必须切换回 main 分支**（`git checkout main && git pull`），确保下次唤醒时处于干净的 main 分支状态
-- **发布完成时必须更新标题**：将主任务状态改为"发布完成"时，同步在标题末尾追加完成时间，格式为 `[YYYY-MM-DD-HH-mm]`（北京时间）。使用 `TZ=Asia/Shanghai date "+%Y-%m-%d-%H-%M"` 获取北京时间。
+- **Done时必须更新标题**：将主任务状态改为"Done"时，同步在标题末尾追加完成时间，格式为 `[YYYY-MM-DD-HH-mm]`（北京时间）。使用 `TZ=Asia/Shanghai date "+%Y-%m-%d-%H-%M"` 获取北京时间。
 
 ## 并行执行安全
 
