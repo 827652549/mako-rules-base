@@ -31,3 +31,4 @@ bash ../mako-rules-base/scripts/init-project.sh
 @rules/glossary.md
 @rules/faq.md
 @rules/linear-api.md
+@rules/git-conventions.md
