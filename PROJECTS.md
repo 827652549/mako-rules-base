@@ -7,3 +7,4 @@
 | /Users/mako/WebstormProjects/mako-rules-base | 2026-05-15 |
 | /Users/mako/WebstormProjects/mako-cursor-ai-template-for-mako-platform | 2026-05-15 |
 | /Users/mako/WebstormProjects/mako-ai-app-job-analyze | 2026-05-15 |
+| /Users/mako/WebstormProjects/mako-ai-claude-manager | 2026-05-15 |
