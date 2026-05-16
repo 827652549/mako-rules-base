@@ -232,6 +232,7 @@ project-lead 需要知道当前仓库对应的 Linear project，用于创建 iss
    EOF
    )"
    ```
+   **⚠️ 同一 MAK 任务 ID 下的所有代码变更必须提交到同一个 feature 分支、同一个 PR。** 不要拆成多个 PR。如果 PR 已创建但未合并，后续变更应追加到同一分支，PR 会自动更新。
 
 #### 第四步半：获取 Preview URL
 9b. PR 创建后，启动**后台定时检查**获取 Vercel preview URL（非阻塞）：
