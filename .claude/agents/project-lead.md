@@ -75,11 +75,12 @@ project-lead 需要知道当前仓库对应的 Linear project，用于创建 iss
 
 1. **解析 issue 标识符**：从 prompt 中提取 `{PREFIX}-{NUMBER}` 格式的标识符，赋值为 `$ISSUE_ID`
 2. **读取主任务**：用 `mcp__linear__get_issue` 读取指定 issue
-3. **设置 iTerm2 Badge**：读取 issue 标题后立即调用 `iterm2-badge` Skill 设置 Badge，标注当前工作内容：
+3. **设置 iTerm2 Badge**：读取 issue 后立即调用 `iterm2-badge` Skill，格式为 `ISSUE_ID:工作目标 [状态]`：
    ```
-   Skill("iterm2-badge", "<ISSUE_ID>:<工作目标>")
+   Skill("iterm2-badge", "<ISSUE_ID>:<工作目标> [<状态>]")
    # 工作目标不超过10字（从 issue 标题提炼）
-   # 示例：Skill("iterm2-badge", "MAK-301:添加changelog页面")
+   # 状态取 issue.status 字段，如 Backlog/Todo/In Progress/测试中/Done
+   # 示例：Skill("iterm2-badge", "MAK-301:添加changelog页面 [Todo]")
    ```
 4. **读取评论**：`mcp__linear__list_comments`，了解已有产物
 5. **读取子任务**：`children`，了解执行进度
@@ -110,7 +111,7 @@ project-lead 需要知道当前仓库对应的 Linear project，用于创建 iss
    | Todo → In Progress | ✅ 自动推进 | ❌ 等待 Human | ❌ 等待 Human |
    | In Progress → 开发 | ✅ 直接派发 | ✅ 等 Human 确认方案后派发 | ✅ 直接派发 |
 
-   自动推进时通过 `mcp__linear__save_issue` 变更状态，并附简短评论说明自动化原因。
+   自动推进时通过 `mcp__linear__save_issue` 变更状态，并附简短评论说明自动化原因。**状态变更后立即调用 `iterm2-badge` Skill 同步 Badge。**
 
 8. **根据状态决定下一步动作**
 
@@ -265,7 +266,7 @@ project-lead 需要知道当前仓库对应的 Linear project，用于创建 iss
 #### 第五步：更新 Linear 并通知 Human
 10. 合格的子任务标记 Done
 11. 不合格的子任务记录失败原因到 Linear 评论
-12. 所有子任务 Done 后，更新主任务状态为"测试中"
+12. 所有子任务 Done 后，更新主任务状态为"测试中"，**同步更新 iTerm2 Badge**
 13. 在主任务评论中写入 PR URL、Preview URL 和变更汇总，格式：
     ```
     📦 **PR**: {pr_url}
@@ -307,7 +308,7 @@ project-lead 需要知道当前仓库对应的 Linear project，用于创建 iss
     # 获取部署状态和 URL
     gh api "repos/$GITHUB_REPO/deployments/{id}/statuses" --jq '.[0] | {state, target_url}'
     ```
-18. 验收通过后，将主任务状态改为"Done"
+18. 验收通过后，将主任务状态改为"Done"，**同步更新 iTerm2 Badge**
 19. **更新标题追加完成时间**：获取北京时间并追加到标题末尾
     ```bash
     TZ=Asia/Shanghai date "+%Y-%m-%d-%H-%M"
@@ -364,8 +365,9 @@ project-lead 需要知道当前仓库对应的 Linear project，用于创建 iss
 
 1. **自动推进**：权限允许时，Boot Sequence 第 7 步会自动通过 `mcp__linear__save_issue` 变更状态，附评论说明自动化原因。
 2. **等待校验**：需要 Human 审批时，输出方案摘要和提示信息，等待 Human 在 Linear 中确认或在 session 中说"开始开发"。
-3. **Human 主动指示**：Human 在 session 中说"开始开发"、"改状态"等明确指令时，立即通过 `mcp__linear__save_issue` 变更状态并继续执行。
+3. **Human 主动指示**：Human 在 session 中说"开始开发"、"改状态"等明确指令时，立即通过 `mcp__linear__save_issue` 变更状态并继续执行。**状态变更后同步更新 Badge。**
 4. **PR 合并铁律不变**：无论何种权限级别，PR 合并始终由 Human 操作。
+5. **Badge 同步**：任何通过 `mcp__linear__save_issue` 变更状态的操作（自动推进、Human 指示、进入测试中、Done 等），均需在变更后立即调用 `iterm2-badge` Skill 更新 Badge 中的状态后缀。
 
 ## ⛔ PR 合并铁律
 
