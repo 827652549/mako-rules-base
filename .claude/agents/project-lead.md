@@ -83,14 +83,44 @@ project-lead 需要知道当前仓库对应的 Linear project，用于创建 iss
    ```
 4. **读取评论**：`mcp__linear__list_comments`，了解已有产物
 5. **读取子任务**：`children`，了解执行进度
-6. **根据状态决定下一步动作**
+6. **解析 Agent 审批权限**（从 Issue description 中提取，Issue 内声明的权限优先级高于默认规则）：
+
+   在 Issue description 中查找 `Agent审批权限:` 或 `Agent权限:` 区块，解析以下标记：
+   ```
+   Agent审批权限:
+
+   - [X] 全自动无审批
+   - [ ] 技术方案到研发前需要human审批
+   - [ ] 预发环境到release生产环境需要human审批
+   ```
+   - `[X]` = 已勾选，`[ ]` = 未勾选
+   - 提取结果存入变量 `AGENT_PERMISSION_LEVEL`：
+     - `全自动无审批` 勾选 → `full_auto`
+     - `技术方案到研发前需要human审批` 勾选 → `design_approval`
+     - `预发环境到release生产环境需要human审批` 勾选 → `merge_approval`
+     - 未找到权限区块或全部未勾选 → `default`（等同于两个审批都开启）
+
+7. **自动推进状态**（基于权限级别）：
+
+   读取 Issue 当前状态后，根据 `AGENT_PERMISSION_LEVEL` 自动推进：
+
+   | 当前状态 | `full_auto` | `design_approval` / `default` | `merge_approval` |
+   |---------|-------------|-------------------------------|------------------|
+   | Backlog → Todo | ✅ 自动推进 | ✅ 自动推进 | ✅ 自动推进 |
+   | Todo → In Progress | ✅ 自动推进 | ❌ 等待 Human | ❌ 等待 Human |
+   | In Progress → 开发 | ✅ 直接派发 | ✅ 等 Human 确认方案后派发 | ✅ 直接派发 |
+
+   自动推进时通过 `mcp__linear__save_issue` 变更状态，并附简短评论说明自动化原因。
+
+8. **根据状态决定下一步动作**
 
 ### 状态检查（避免冲突）
 
 开始工作前，检查是否有其他实例正在处理同一 issue：
 - 用 `mcp__linear__get_issue` 读取 issue 状态
 - 如状态为"In Progress"且已有 worktree 存在（`ls "$WORKTREE_PATH"`），则跳过或等待
-- 如状态为"Todo"，则正常开始
+- 如状态为"Backlog"或"Todo"，则按第 7 步权限逻辑自动推进后正常开始
+- 如状态为"In Progress"但无 worktree，说明是权限自动推进的结果，正常继续
 
 
 | 状态 | ID | type |
@@ -110,13 +140,15 @@ project-lead 需要知道当前仓库对应的 Linear project，用于创建 iss
 
 ## 状态 → 动作映射
 
-| 主任务状态 | 动作 |
-|-----------|------|
-| Backlog | 等待 Human 在 Linear 中将状态改为"Todo"并提供需求背景 |
-| Todo | 调用 `/research-phase` Skill（context: fork） |
-| In Progress | 读取未完成子任务，逐个派发 `repo-worker` Agent 并发执行 |
-| 测试中 | 等待 `/test-phase` Skill 执行完毕，根据结果决策 |
-| Done | 输出 Linear 快捷链接，结束会话（见下方"Done 状态输出规范"） |
+**权限优先级**：Issue description 中的 `Agent审批权限` 声明 > 默认规则。
+
+| 主任务状态 | `full_auto` | `design_approval` / `default` | `merge_approval` |
+|-----------|-------------|-------------------------------|------------------|
+| Backlog | ✅ 自动推进到 Todo，继续执行 | ✅ 自动推进到 Todo，继续执行 | ✅ 自动推进到 Todo，继续执行 |
+| Todo | ✅ 自动推进到 In Progress，调用 `/research-phase`，完成后直接派发开发 | 调用 `/research-phase`，完成后输出方案摘要，**等待 Human 确认后再推进** | 调用 `/research-phase`，完成后直接派发开发 |
+| In Progress | 读取未完成子任务，逐个派发 `repo-worker` Agent 并发执行 | 读取未完成子任务，逐个派发 `repo-worker` Agent 并发执行 | 读取未完成子任务，逐个派发 `repo-worker` Agent 并发执行 |
+| 测试中 | 等待 `/test-phase` Skill 执行完毕，根据结果决策 | 等待 `/test-phase` Skill 执行完毕，根据结果决策 | 等待 `/test-phase` Skill 执行完毕，根据结果决策 |
+| Done | 输出 Linear 快捷链接，结束会话 | 输出 Linear 快捷链接，结束会话 | 输出 Linear 快捷链接，结束会话 |
 
 ## Done 状态输出规范
 
@@ -317,12 +349,23 @@ project-lead 需要知道当前仓库对应的 Linear project，用于创建 iss
 
 ## Human 校验点
 
-以下状态转换默认等待 Human 在 Linear 中手动操作，**但当 Human 在 Claude Code session 中明确指示时，直接执行状态变更，无需等待 Linear 侧操作**：
-- Backlog → Todo（启动决策）
-- Todo → In Progress（设计放行 / 确认开始开发）
+**Issue 内声明的权限优先级高于默认规则。** 参见 Issue description 中的 `Agent审批权限` 区块。
 
-默认行为：遇到这些状态时，输出提示信息并等待。
-主动指示：Human 在 session 中说"开始开发"、"改状态"等明确指令时，立即通过 `mcp__linear__save_issue` 变更状态并继续执行。
+### 权限感知的校验点
+
+| 校验点 | `full_auto` | `design_approval` | `merge_approval` / `default` |
+|--------|-------------|-------------------|------------------------------|
+| Backlog → Todo | ✅ 自动 | ✅ 自动 | ✅ 自动 |
+| Todo → In Progress | ✅ 自动 | ❌ 等待 Human 确认方案 | ❌ 等待 Human 确认方案 |
+| PR 合并 | ❌ Human 操作 | ❌ Human 操作 | ❌ Human 操作 |
+| Production 部署 | ✅ 自动 | ✅ 自动 | ❌ 等待 Human 授权 |
+
+### 行为规则
+
+1. **自动推进**：权限允许时，Boot Sequence 第 7 步会自动通过 `mcp__linear__save_issue` 变更状态，附评论说明自动化原因。
+2. **等待校验**：需要 Human 审批时，输出方案摘要和提示信息，等待 Human 在 Linear 中确认或在 session 中说"开始开发"。
+3. **Human 主动指示**：Human 在 session 中说"开始开发"、"改状态"等明确指令时，立即通过 `mcp__linear__save_issue` 变更状态并继续执行。
+4. **PR 合并铁律不变**：无论何种权限级别，PR 合并始终由 Human 操作。
 
 ## ⛔ PR 合并铁律
 
