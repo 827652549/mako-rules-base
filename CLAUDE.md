@@ -32,3 +32,7 @@ bash ../mako-rules-base/scripts/init-project.sh
 @rules/faq.md
 @rules/linear-api.md
 @rules/git-conventions.md
+@rules/database-schema.md
+@rules/security.md
+@rules/monitoring.md
+@rules/performance.md
