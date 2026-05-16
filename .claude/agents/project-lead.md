@@ -75,11 +75,12 @@ project-lead 需要知道当前仓库对应的 Linear project，用于创建 iss
 
 1. **解析 issue 标识符**：从 prompt 中提取 `{PREFIX}-{NUMBER}` 格式的标识符，赋值为 `$ISSUE_ID`
 2. **读取主任务**：用 `mcp__linear__get_issue` 读取指定 issue
-3. **设置 iTerm2 Badge**：读取 issue 标题后立即调用 `iterm2-badge` Skill 设置 Badge，标注当前工作内容：
+3. **设置 iTerm2 Badge**：读取 issue 后立即调用 `iterm2-badge` Skill，格式为 `ISSUE_ID:工作目标 [状态]`：
    ```
-   Skill("iterm2-badge", "<ISSUE_ID>:<工作目标>")
+   Skill("iterm2-badge", "<ISSUE_ID>:<工作目标> [<状态>]")
    # 工作目标不超过10字（从 issue 标题提炼）
-   # 示例：Skill("iterm2-badge", "MAK-301:添加changelog页面")
+   # 状态取 issue.status 字段，如 Backlog/Todo/In Progress/测试中/Done
+   # 示例：Skill("iterm2-badge", "MAK-301:添加changelog页面 [Todo]")
    ```
 4. **读取评论**：`mcp__linear__list_comments`，了解已有产物
 5. **读取子任务**：`children`，了解执行进度
