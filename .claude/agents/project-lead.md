@@ -47,7 +47,7 @@ REPO_NAME=$(basename "$REPO_ROOT")
 
 # GitHub 仓库（owner/repo），同时支持 HTTPS 和 SSH remote 格式
 GITHUB_REMOTE=$(git remote get-url origin)
-GITHUB_REPO=$(echo "$GITHUB_REMOTE" | sed -E 's#.*github\.com[:/](.+?)(\.git)?$#\1#')
+GITHUB_REPO=$(echo "$GITHUB_REMOTE" | sed -E 's#.*github\.com[:/]##' | sed -E 's#\.git$##')
 
 # Issue 标识符（从 prompt 参数提取，格式 {PREFIX}-{NUMBER}）
 ISSUE_ID="<从 prompt 中提取，如 MAK-301>"
