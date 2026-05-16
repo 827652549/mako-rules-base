@@ -17,16 +17,16 @@ echo ""
 # 1. CLAUDE.md（base 自身跳过自引用）
 IMPORT_LINE="@${RULES_BASE_REL}/CLAUDE.md"
 if [ "$(realpath "$PROJECT_PATH" 2>/dev/null || echo "$PROJECT_PATH")" = "$(realpath "$RULES_BASE" 2>/dev/null || echo "$RULES_BASE")" ]; then
-  echo "[1/6] base 自身，跳过 @import"
+  echo "[1/7] base 自身，跳过 @import"
 else
 if [ ! -f CLAUDE.md ]; then
   echo "$IMPORT_LINE" > CLAUDE.md
-  echo "[1/6] CLAUDE.md 已创建，写入 @import"
+  echo "[1/7] CLAUDE.md 已创建，写入 @import"
 elif grep -qF "$IMPORT_LINE" CLAUDE.md; then
-  echo "[1/6] CLAUDE.md 已包含 @import，跳过"
+  echo "[1/7] CLAUDE.md 已包含 @import，跳过"
 else
   echo "$IMPORT_LINE" | cat - CLAUDE.md > _tmp_claude && mv _tmp_claude CLAUDE.md
-  echo "[1/6] CLAUDE.md 已在顶部插入 @import"
+  echo "[1/7] CLAUDE.md 已在顶部插入 @import"
 fi
 fi
 
@@ -35,16 +35,16 @@ mkdir -p .claude
 AGENTS_TARGET=".claude/agents"
 AGENTS_REL="$(realpath --relative-to="$(pwd)/.claude" "$RULES_BASE/.claude/agents" 2>/dev/null || python3 -c "import os,sys; print(os.path.relpath(sys.argv[1], sys.argv[2]))" "$RULES_BASE/.claude/agents" "$(pwd)/.claude")"
 if [ "$(realpath "$PROJECT_PATH" 2>/dev/null || echo "$PROJECT_PATH")" = "$(realpath "$RULES_BASE" 2>/dev/null || echo "$RULES_BASE")" ]; then
-  echo "[2/6] base 自身，跳过"
+  echo "[2/7] base 自身，跳过"
 elif [ -L "$AGENTS_TARGET" ]; then
-  echo "[2/6] agents 已是 symlink，跳过"
+  echo "[2/7] agents 已是 symlink，跳过"
 elif [ -d "$AGENTS_TARGET" ]; then
   rm -rf "$AGENTS_TARGET"
   ln -sf "$AGENTS_REL" "$AGENTS_TARGET"
-  echo "[2/6] agents 已迁移为整目录 symlink"
+  echo "[2/7] agents 已迁移为整目录 symlink"
 else
   ln -sf "$AGENTS_REL" "$AGENTS_TARGET"
-  echo "[2/6] agents -> 整目录 symlink 创建"
+  echo "[2/7] agents -> 整目录 symlink 创建"
 fi
 
 # 3. skills — 整目录 symlink（新增 skill 自动同步）
@@ -52,16 +52,16 @@ mkdir -p .claude
 SKILLS_TARGET=".claude/skills"
 SKILLS_REL="$(realpath --relative-to="$(pwd)/.claude" "$RULES_BASE/.claude/skills" 2>/dev/null || python3 -c "import os,sys; print(os.path.relpath(sys.argv[1], sys.argv[2]))" "$RULES_BASE/.claude/skills" "$(pwd)/.claude")"
 if [ "$(realpath "$PROJECT_PATH" 2>/dev/null || echo "$PROJECT_PATH")" = "$(realpath "$RULES_BASE" 2>/dev/null || echo "$RULES_BASE")" ]; then
-  echo "[3/6] base 自身，跳过"
+  echo "[3/7] base 自身，跳过"
 elif [ -L "$SKILLS_TARGET" ]; then
-  echo "[3/6] skills 已是 symlink，跳过"
+  echo "[3/7] skills 已是 symlink，跳过"
 elif [ -d "$SKILLS_TARGET" ]; then
   rm -rf "$SKILLS_TARGET"
   ln -sf "$SKILLS_REL" "$SKILLS_TARGET"
-  echo "[3/6] skills 已迁移为整目录 symlink"
+  echo "[3/7] skills 已迁移为整目录 symlink"
 else
   ln -sf "$SKILLS_REL" "$SKILLS_TARGET"
-  echo "[3/6] skills -> 整目录 symlink 创建"
+  echo "[3/7] skills -> 整目录 symlink 创建"
 fi
 
 # 4. settings.local.json — symlink 共享权限配置
@@ -69,16 +69,16 @@ mkdir -p .claude
 SETTINGS_TARGET=".claude/settings.local.json"
 SETTINGS_REL="$(realpath --relative-to="$(pwd)/.claude" "$RULES_BASE/.claude/settings.local.json" 2>/dev/null || python3 -c "import os,sys; print(os.path.relpath(sys.argv[1], sys.argv[2]))" "$RULES_BASE/.claude/settings.local.json" "$(pwd)/.claude")"
 if [ "$(realpath "$PROJECT_PATH" 2>/dev/null || echo "$PROJECT_PATH")" = "$(realpath "$RULES_BASE" 2>/dev/null || echo "$RULES_BASE")" ]; then
-  echo "[4/6] base 自身，跳过"
+  echo "[4/7] base 自身，跳过"
 elif [ -L "$SETTINGS_TARGET" ]; then
-  echo "[4/6] settings.local.json 已是 symlink，跳过"
+  echo "[4/7] settings.local.json 已是 symlink，跳过"
 elif [ -f "$SETTINGS_TARGET" ]; then
   mv "$SETTINGS_TARGET" "${SETTINGS_TARGET}.bak"
   ln -sf "$SETTINGS_REL" "$SETTINGS_TARGET"
-  echo "[4/6] settings.local.json 已备份为 .bak 并替换为 symlink"
+  echo "[4/7] settings.local.json 已备份为 .bak 并替换为 symlink"
 else
   ln -sf "$SETTINGS_REL" "$SETTINGS_TARGET"
-  echo "[4/6] settings.local.json -> symlink 创建"
+  echo "[4/7] settings.local.json -> symlink 创建"
 fi
 
 # 5. MCP servers — 写入 ~/.claude.json 的 projects.<path>.mcpServers
@@ -130,11 +130,11 @@ with open(claude_json_path, "w", encoding="utf-8") as f:
     json.dump(data, f, ensure_ascii=False, separators=(",", ":"))
 
 if added:
-    print(f"[5/6] MCP 已添加: {', '.join(added)}")
+    print(f"[5/7] MCP 已添加: {', '.join(added)}")
 if skipped:
-    print(f"[5/6] MCP 已存在跳过: {', '.join(skipped)}")
+    print(f"[5/7] MCP 已存在跳过: {', '.join(skipped)}")
 if not context7_key:
-    print("[5/6] context7 跳过 — 未设置 CONTEXT7_API_KEY（可 export 后重跑）")
+    print("[5/7] context7 跳过 — 未设置 CONTEXT7_API_KEY（可 export 后重跑）")
 PYEOF
 
 # 6. 注册到 PROJECTS.md
@@ -152,7 +152,7 @@ if [ ! -f "$PROJECTS_FILE" ]; then
 HEADER
 fi
 if grep -qF "$PROJECT_PATH" "$PROJECTS_FILE"; then
-  echo "[6/6] PROJECTS.md 已包含本项目，跳过"
+  echo "[6/7] PROJECTS.md 已包含本项目，跳过"
 else
   cat >> "$PROJECTS_FILE" << EOF
 
@@ -164,8 +164,32 @@ else
 - **关系**: 待补充
 
 EOF
-  echo "[6/6] 已注册到 PROJECTS.md"
+  echo "[6/7] 已注册到 PROJECTS.md"
 fi
+
+# 7. 注册到 clp-mapping.json（Linear 一键启动 clp 脚本用）
+CLP_MAPPING="$HOME/.claude/clp-mapping.json"
+python3 - "$REPO_NAME" "$PROJECT_PATH" "$CLP_MAPPING" << 'PYEOF'
+import json, sys, os
+
+repo_name, project_path, mapping_file = sys.argv[1], sys.argv[2], sys.argv[3]
+
+# 读取或创建映射文件
+if os.path.exists(mapping_file):
+    with open(mapping_file, "r") as f:
+        mapping = json.load(f)
+else:
+    mapping = {}
+
+if mapping.get(repo_name) == project_path:
+    print(f"[7/7] clp-mapping.json 已包含 {repo_name}，跳过")
+else:
+    mapping[repo_name] = project_path
+    os.makedirs(os.path.dirname(mapping_file), exist_ok=True)
+    with open(mapping_file, "w") as f:
+        json.dump(mapping, f, ensure_ascii=False, indent=2)
+    print(f"[7/7] clp-mapping.json 已更新: {repo_name} → {project_path}")
+PYEOF
 
 echo ""
 echo "✓ 接入完成（重启 Claude Code 会话后 MCP 生效）"
