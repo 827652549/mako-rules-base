@@ -40,3 +40,12 @@
 - **说明**: 所有项目的共享规范库，提供 skills、agents、rules、hooks 的统一分发
 - **关系**: 被以上所有项目依赖
 
+
+## mako-ai-app-cuddlemeow
+- **路径**: /Users/mako/WebstormProjects/mako-ai-app-cuddlemeow
+- **Linear**: mako-ai-app-cuddlemeow
+- **注册时间**: 2026-05-17
+- **说明**: 猫贴贴 / CuddleMeow，宠物社交应用
+- **生产地址**: 待部署
+- **关系**: 待补充
+
