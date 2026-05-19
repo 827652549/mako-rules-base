@@ -24,7 +24,6 @@ bash ../mako-rules-base/scripts/init-project.sh
 @rules/base/ai-interaction.md
 @rules/base/coding-style.md
 @rules/base/lint-requirements.md
-@rules/base/ui-style-standards.md
 @rules/base/api-standards.md
 @rules/base/testing-standards.md
 @rules/base/glossary.md

@@ -11,3 +11,7 @@
 @rules/nextjs/monitoring.md
 @rules/nextjs/performance.md
 @rules/nextjs/code-examples.md
+@rules/nextjs/testing-standards.md
+@rules/nextjs/lint-requirements.md
+@rules/nextjs/ui-style-standards.md
+@rules/nextjs/glossary.md
