@@ -10,3 +10,4 @@
 @rules/nextjs/security.md
 @rules/nextjs/monitoring.md
 @rules/nextjs/performance.md
+@rules/nextjs/code-examples.md

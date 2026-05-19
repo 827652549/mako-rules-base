@@ -1,51 +1,33 @@
 
-# 代码示例库
+# 代码示例库（通用）
 
-## API请求示例
+> 平台专属示例见对应平台的 `code-examples.md`。
+
+## 异步请求与错误处理
+
 ```typescript
-// 标准API请求模式
-import { apiClient } from '@/utils/apiClient';
-import { handleApiError } from '@/utils/errorHandler';
-
-export async function fetchUserData(userId: string) {
+// 标准 async/await 请求模式：catch 后返回降级值，不吞掉异常
+export async function fetchUser(userId: string): Promise<User | null> {
   try {
-    const response = await apiClient.get(`/users/${userId}`);
+    const response = await apiClient.get<User>(`/users/${userId}`);
     return response.data;
   } catch (error) {
-    handleApiError(error, 'Failed to fetch user data');
+    console.error('[fetchUser]', error);
     return null;
   }
 }
 ```
 
-## 表单处理示例
+## 输入校验（Zod）
 
 ```typescript
-// React Hook Form使用规范
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
-// 定义验证模式
-const schema = z.object({
-  email: z.string().email('请输入有效的邮箱地址'),
-  password: z.string().min(8, '密码至少8个字符')
+const createPostSchema = z.object({
+  title: z.string().min(1).max(200),
+  content: z.string().min(1),
 });
 
-// 使用Hook
-function LoginForm() {
-  const { register, handleSubmit, formState: { errors } } = useForm({
-    resolver: zodResolver(schema)
-  });
-  
-  const onSubmit = (data) =&gt; {
-    // 处理表单提交
-  };
-  
-  return (
-    <form onSubmit={handleSubmit(onSubmit)}&gt;
-      {/* 表单内容 */}
-    </form>
-  );
-}
+// 在边界处解析，内部函数直接使用已校验的类型
+const input = createPostSchema.parse(rawInput);
 ```
