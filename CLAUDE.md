@@ -27,7 +27,6 @@ bash ../mako-rules-base/scripts/init-project.sh
 @rules/base/ui-style-standards.md
 @rules/base/api-standards.md
 @rules/base/testing-standards.md
-@rules/base/code-examples.md
 @rules/base/glossary.md
 @rules/base/linear-api.md
 @rules/base/git-conventions.md
