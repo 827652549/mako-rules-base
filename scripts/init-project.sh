@@ -3,6 +3,7 @@
 # Env vars (optional):
 #   CONTEXT7_API_KEY  — add context7 MCP if provided
 #   PLATFORM          — skip interactive prompt: nextjs | ios | expo | python | base
+#   GH_VISIBILITY     — public | private (default: private)，跳过 GitHub 创建询问
 
 set -e
 
@@ -14,6 +15,48 @@ IS_BASE_SELF="$([ "$(realpath "$PROJECT_PATH" 2>/dev/null || echo "$PROJECT_PATH
 
 echo "==> mako-rules-base: $RULES_BASE"
 echo "==> 目标项目: $PROJECT_PATH"
+echo ""
+
+# ── 步骤 0：Git 初始化 ────────────────────────────────────────────────────
+if [ ! -d .git ]; then
+  echo "[0/7] 未检测到 git 仓库，开始初始化..."
+  git init
+
+  # 提交一个空 commit 以确保分支存在，再重命名为 release
+  INIT_BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null || echo "main")
+  git commit --allow-empty -m "chore: init"
+  git branch -m "$INIT_BRANCH" release
+  echo "[0/7] git 已初始化，主分支：release"
+
+  # 若 gh 可用且尚无 remote，询问是否创建 GitHub 仓库
+  REPO_NAME="$(basename "$PROJECT_PATH")"
+  if command -v gh &>/dev/null && ! git remote get-url origin &>/dev/null; then
+    if [ -n "${GH_VISIBILITY:-}" ]; then
+      # 环境变量指定，不交互
+      VIS="$GH_VISIBILITY"
+    else
+      read -r -p "[0/7] 是否创建 GitHub 远端仓库？[y/N] " yn
+      if [[ "$yn" =~ ^[Yy]$ ]]; then
+        read -r -p "[0/7] 可见性 (public/private) [private]: " VIS
+        VIS="${VIS:-private}"
+      else
+        VIS=""
+      fi
+    fi
+
+    if [ -n "$VIS" ]; then
+      gh repo create "$REPO_NAME" --"$VIS" --source=. --remote=origin --push
+      # 将 GitHub 默认分支设为 release（origin 上此时只有 release）
+      gh repo edit --default-branch release 2>/dev/null || true
+      echo "[0/7] GitHub 仓库已创建并推送：$REPO_NAME（$VIS）"
+    else
+      echo "[0/7] 跳过 GitHub 创建。手动推送："
+      echo "       gh repo create $REPO_NAME --private --source=. --remote=origin --push"
+    fi
+  fi
+else
+  echo "[0/7] 已有 git 仓库，跳过初始化"
+fi
 echo ""
 
 # ── 平台选择 ────────────────────────────────────────────────────────────────
