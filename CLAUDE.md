@@ -1,10 +1,13 @@
 # Mako Rules Base — 共享规范入口
 
-所有接入项目在根目录 `CLAUDE.md` 顶部加入以下一行即可引用全部共享规范：
+所有接入项目在根目录 `CLAUDE.md` 顶部加入两行：
 
 ```
 @../mako-rules-base/CLAUDE.md
+@../mako-rules-base/rules/{platform}-platform.md
 ```
+
+其中 `{platform}` 为：`nextjs` / `ios` / `expo` / `python`。
 
 ## 接入新项目（一键）
 
@@ -14,25 +17,17 @@
 bash ../mako-rules-base/scripts/init-project.sh
 ```
 
-脚本幂等，重复执行安全，已存在的内容自动跳过。
+脚本幂等，重复执行安全，已存在的内容自动跳过。脚本会交互式询问平台类型，并自动写入正确的 `@import` 行。
 
 ---
 
-@rules/ai-interaction.md
-@rules/coding-style.md
-@rules/lint-requirements.md
-@rules/react-guidelines.md
-@rules/ui-style-standards.md
-@rules/api-standards.md
-@rules/testing-standards.md
-@rules/code-examples.md
-@rules/nextjs-stack.md
-@rules/nextjs-architecture.md
-@rules/glossary.md
-@rules/faq.md
-@rules/linear-api.md
-@rules/git-conventions.md
-@rules/database-schema.md
-@rules/security.md
-@rules/monitoring.md
-@rules/performance.md
+@rules/base/ai-interaction.md
+@rules/base/coding-style.md
+@rules/base/lint-requirements.md
+@rules/base/api-standards.md
+@rules/base/testing-standards.md
+@rules/base/glossary.md
+@rules/base/linear-api.md
+@rules/base/git-conventions.md
+@rules/base/security.md
+@rules/base/monitoring.md

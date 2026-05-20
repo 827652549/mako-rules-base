@@ -21,13 +21,13 @@ git push origin --delete main
 | 类型 | 格式 | 示例 |
 |------|------|------|
 | 主分支 | `release` | `release` |
-| 功能分支 | `feature/{ISSUE_ID}` | `feature/MAK-301` |
-| 修复分支 | `hotfix/{描述}` | `hotfix/login-crash` |
+| 功能分支 | `feature/{ISSUE_ID}-{描述}` | `feature/MAK-301-pet-photo-upload` |
+| 修复分支 | `hotfix/{ISSUE_ID}-{描述}` | `hotfix/MAK-302-login-crash` |
 
 ## Worktree 约定
 
 开发任务必须在独立的 git worktree 中进行，feature 分支从 `release` 创建：
 
 ```bash
-git worktree add "$WORKTREE_PATH" -b "feature/$ISSUE_ID" release
+git worktree add "$WORKTREE_PATH" -b "feature/${ISSUE_ID}-${DESCRIPTION}" release
 ```
