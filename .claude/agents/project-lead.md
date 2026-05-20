@@ -57,6 +57,21 @@ WORKTREE_NAME="${REPO_NAME}-${ISSUE_ID}"
 WORKTREE_PATH="$(dirname "${REPO_ROOT}")/${WORKTREE_NAME}"
 ```
 
+### 第零步半（前置）：规则引用完整性检查
+
+在解析 Linear 之前，先验证 mako-rules-base 的规则文件是否全部挂载：
+
+```bash
+RULES_BASE="$(realpath "$REPO_ROOT/.claude/agents/../.." 2>/dev/null || echo "")"
+# agents 是 symlink → .claude/agents → mako-rules-base/.claude/agents
+# 所以 mako-rules-base = agents 目录的上两级
+RULES_BASE="$(dirname "$(dirname "$(readlink -f "$REPO_ROOT/.claude/agents")")")"
+bash "$RULES_BASE/scripts/check-rules.sh" "$RULES_BASE"
+```
+
+- **通过（exit 0）**：继续执行
+- **发现缺失（exit 1）**：输出缺失列表，**自动将缺失的 @import 补入对应入口文件**，再继续执行（不阻塞任务）
+
 ### 第零步半：解析 Linear Project 映射
 
 project-lead 需要知道当前仓库对应的 Linear project，用于创建 issue 时自动关联。
