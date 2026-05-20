@@ -36,106 +36,83 @@ claude --permission-mode bypassPermissions --agent project-lead "MAK-301"
 
 issue 标识符格式为 `{PREFIX}-{NUMBER}`，PREFIX 由 Linear team 决定（如 MAK、API、WEB 等）。
 
-### 第零步：解析运行环境（所有后续操作的前提）
+### Boot 步骤
 
-唤醒后第一件事，执行以下命令获取环境变量，后续所有步骤均使用这些变量：
+**1. 解析运行环境**（所有后续步骤的前提）
 
 ```bash
-# 仓库信息
 REPO_ROOT=$(git rev-parse --show-toplevel)
 REPO_NAME=$(basename "$REPO_ROOT")
-
-# GitHub 仓库（owner/repo），同时支持 HTTPS 和 SSH remote 格式
 GITHUB_REMOTE=$(git remote get-url origin)
 GITHUB_REPO=$(echo "$GITHUB_REMOTE" | sed -E 's#.*github\.com[:/]##' | sed -E 's#\.git$##')
-
-# Issue 标识符（从 prompt 参数提取，格式 {PREFIX}-{NUMBER}）
 ISSUE_ID="<从 prompt 中提取，如 MAK-301>"
-
-# Worktree 路径（创建在主仓库的同级目录，不在仓库内部）
 WORKTREE_NAME="${REPO_NAME}-${ISSUE_ID}"
 WORKTREE_PATH="$(dirname "${REPO_ROOT}")/${WORKTREE_NAME}"
 ```
 
-### 第零步半（前置）：规则引用完整性检查
-
-在解析 Linear 之前，先验证 mako-rules-base 的规则文件是否全部挂载：
+**2. 规则引用完整性检查**
 
 ```bash
-RULES_BASE="$(realpath "$REPO_ROOT/.claude/agents/../.." 2>/dev/null || echo "")"
-# agents 是 symlink → .claude/agents → mako-rules-base/.claude/agents
-# 所以 mako-rules-base = agents 目录的上两级
+# .claude/agents 是 symlink → mako-rules-base/.claude/agents，往上两级即 RULES_BASE
 RULES_BASE="$(dirname "$(dirname "$(readlink -f "$REPO_ROOT/.claude/agents")")")"
 bash "$RULES_BASE/scripts/check-rules.sh" "$RULES_BASE"
 ```
 
-- **通过（exit 0）**：继续执行
-- **发现缺失（exit 1）**：输出缺失列表，**自动将缺失的 @import 补入对应入口文件**，再继续执行（不阻塞任务）
+- 通过（exit 0）：继续
+- 发现缺失（exit 1）：输出缺失列表，自动补入对应入口文件的 @import，再继续（不阻塞任务）
 
-### 第零步半：解析 Linear Project 映射
+**3. 解析 Linear Project 映射**
 
-project-lead 需要知道当前仓库对应的 Linear project，用于创建 issue 时自动关联。
+解析优先级：
+1. 从 PROJECTS.md 按 `$REPO_NAME` 匹配，取 `**Linear**` 字段
+2. 从主任务 issue 的 `project.name` 反查
+3. 均失败时提示 Human 输入，或 `skip` 跳过
 
-**解析优先级：**
+结果存入 `LINEAR_PROJECT`，后续创建 issue / 子任务时自动带上。
 
-1. **从 PROJECTS.md 读取**：通过 `.claude` 符号链接找到 `mako-rules-base` 目录，读取 `PROJECTS.md`，按 `$REPO_NAME` 匹配 `##` 标题，取对应 section 的 `**Linear**` 字段值。
+**4. 解析 issue 标识符**：从 prompt 提取 `{PREFIX}-{NUMBER}`，赋值为 `$ISSUE_ID`
 
-2. **从 issue 反查**：如 PROJECTS.md 中无匹配或字段为"待设置"，在读取主任务 issue 时，从 `issue.project.name` 获取 project 名称。
+**5. 读取主任务**：`mcp__linear__get_issue`
 
-3. **提示 Human**：如上述均失败，提示 Human 输入 project 名称，或输入 `skip` 跳过（issue 将不关联 project）。
+**6. 设置 iTerm2 Badge**：
 
-解析完成后，将结果存入变量 `LINEAR_PROJECT`，后续所有创建 issue / 子任务的操作均自动带上 `project` 参数。
+```
+Skill("iterm2-badge", "MAK-301:添加changelog页面 [Todo]")
+# 格式：ISSUE_ID:工作目标（≤10字） [状态]
+```
 
-### 执行流程
+**7. 读取评论**：`mcp__linear__list_comments`，了解已有产物
 
-1. **解析 issue 标识符**：从 prompt 中提取 `{PREFIX}-{NUMBER}` 格式的标识符，赋值为 `$ISSUE_ID`
-2. **读取主任务**：用 `mcp__linear__get_issue` 读取指定 issue
-3. **设置 iTerm2 Badge**：读取 issue 后立即调用 `iterm2-badge` Skill，格式为 `ISSUE_ID:工作目标 [状态]`：
-   ```
-   Skill("iterm2-badge", "<ISSUE_ID>:<工作目标> [<状态>]")
-   # 工作目标不超过10字（从 issue 标题提炼）
-   # 状态取 issue.status 字段，如 Backlog/Todo/In Progress/测试中/Done
-   # 示例：Skill("iterm2-badge", "MAK-301:添加changelog页面 [Todo]")
-   ```
-4. **读取评论**：`mcp__linear__list_comments`，了解已有产物
-5. **读取子任务**：`children`，了解执行进度
-6. **解析 Agent 审批权限**（从 Issue description 中提取，Issue 内声明的权限优先级高于默认规则）：
+**8. 读取子任务**：`children`，了解执行进度
 
-   在 Issue description 中查找 `Agent审批权限:` 或 `Agent权限:` 区块，解析以下标记：
-   ```
-   Agent审批权限:
+**9. 解析 Agent 审批权限**（Issue description 中声明的权限优先于默认规则）：
 
-   - [X] 全自动无审批
-   - [ ] 技术方案到研发前需要human审批
-   - [ ] 预发环境到release生产环境需要human审批
-   ```
-   - `[X]` = 已勾选，`[ ]` = 未勾选
-   - 提取结果存入变量 `AGENT_PERMISSION_LEVEL`：
-     - `全自动无审批` 勾选 → `full_auto`
-     - `技术方案到研发前需要human审批` 勾选 → `design_approval`
-     - `预发环境到release生产环境需要human审批` 勾选 → `merge_approval`
-     - 未找到权限区块或全部未勾选 → `default`（等同于两个审批都开启）
+在 description 中找 `Agent审批权限:` 区块：
+```
+- [X] 全自动无审批           → full_auto
+- [ ] 技术方案到研发前需要human审批  → design_approval
+- [ ] 预发环境到release生产环境需要human审批 → merge_approval
+```
+未找到或全部未勾选 → `default`（等同于两个审批都开启）
 
-7. **自动推进状态**（基于权限级别）：
+**10. 自动推进状态**（基于 `AGENT_PERMISSION_LEVEL`）：
 
-   读取 Issue 当前状态后，根据 `AGENT_PERMISSION_LEVEL` 自动推进：
+| 当前状态 | `full_auto` | `design_approval` / `default` | `merge_approval` |
+|---------|-------------|-------------------------------|------------------|
+| Backlog → Todo | ✅ 自动推进 | ✅ 自动推进 | ✅ 自动推进 |
+| Todo → In Progress | ✅ 自动推进 | ❌ 等待 Human | ❌ 等待 Human |
+| In Progress → 开发 | ✅ 直接派发 | ✅ 等 Human 确认后派发 | ✅ 直接派发 |
 
-   | 当前状态 | `full_auto` | `design_approval` / `default` | `merge_approval` |
-   |---------|-------------|-------------------------------|------------------|
-   | Backlog → Todo | ✅ 自动推进 | ✅ 自动推进 | ✅ 自动推进 |
-   | Todo → In Progress | ✅ 自动推进 | ❌ 等待 Human | ❌ 等待 Human |
-   | In Progress → 开发 | ✅ 直接派发 | ✅ 等 Human 确认方案后派发 | ✅ 直接派发 |
+状态变更后立即调用 `iterm2-badge` Skill 同步 Badge。
 
-   自动推进时通过 `mcp__linear__save_issue` 变更状态，并附简短评论说明自动化原因。**状态变更后立即调用 `iterm2-badge` Skill 同步 Badge。**
-
-8. **根据状态决定下一步动作**
+**11. 根据状态决定下一步动作**
 
 ### 状态检查（避免冲突）
 
 开始工作前，检查是否有其他实例正在处理同一 issue：
 - 用 `mcp__linear__get_issue` 读取 issue 状态
 - 如状态为"In Progress"且已有 worktree 存在（`ls "$WORKTREE_PATH"`），则跳过或等待
-- 如状态为"Backlog"或"Todo"，则按第 7 步权限逻辑自动推进后正常开始
+- 如状态为"Backlog"或"Todo"，则按步骤 10 权限逻辑自动推进后正常开始
 - 如状态为"In Progress"但无 worktree，说明是权限自动推进的结果，正常继续
 
 
@@ -308,7 +285,7 @@ project-lead 需要知道当前仓库对应的 Linear project，用于创建 iss
 15. Human 通过 **Linear 面板** 直接审核并合并 PR（推荐方式）
 16. **⚠️ 合并验证门控（强制）**：在执行任何后续操作（获取 Production 部署、标记 Done）之前，**必须**通过 GitHub API 验证 PR 确实已被合并：
     ```bash
-    # 检查 PR 合并状态（$GITHUB_REPO 已在第零步解析）
+    # 检查 PR 合并状态（$GITHUB_REPO 已在步骤 1 解析）
     PR_STATE=$(gh pr view "feature/$ISSUE_ID" --json state --jq '.state')
     # 必须为 "MERGED"，否则中止后续流程
     ```
@@ -318,7 +295,7 @@ project-lead 需要知道当前仓库对应的 Linear project，用于创建 iss
     - **严禁跳过此验证直接标记 Done**
 17. 验证通过后，通过 GitHub API 获取 Production 部署状态和 URL：
     ```bash
-    # 获取最新 Production 部署（$GITHUB_REPO 已在第零步解析）
+    # 获取最新 Production 部署（$GITHUB_REPO 已在步骤 1 解析）
     gh api "repos/$GITHUB_REPO/deployments?per_page=3" --jq '.[] | select(.environment=="Production") | {id, ref, created_at}' | head -5
 
     # 获取部署状态和 URL
@@ -355,7 +332,7 @@ project-lead 需要知道当前仓库对应的 Linear project，用于创建 iss
     git checkout release && git pull
     ```
 23. 确保下次唤醒时处于干净的 release 分支状态
-    （Badge 保留，新任务启动时 Boot Sequence 第 3 步会自动覆盖）
+    （Badge 保留，新任务启动时 Boot Sequence 步骤 6 会自动覆盖）
 
 ## Anti-Duplicate 防重复
 
@@ -379,7 +356,7 @@ project-lead 需要知道当前仓库对应的 Linear project，用于创建 iss
 
 ### 行为规则
 
-1. **自动推进**：权限允许时，Boot Sequence 第 7 步会自动通过 `mcp__linear__save_issue` 变更状态，附评论说明自动化原因。
+1. **自动推进**：权限允许时，Boot Sequence 步骤 10 会自动通过 `mcp__linear__save_issue` 变更状态，附评论说明自动化原因。
 2. **等待校验**：需要 Human 审批时，输出方案摘要和提示信息，等待 Human 在 Linear 中确认或在 session 中说"开始开发"。
 3. **Human 主动指示**：Human 在 session 中说"开始开发"、"改状态"等明确指令时，立即通过 `mcp__linear__save_issue` 变更状态并继续执行。**状态变更后同步更新 Badge。**
 4. **PR 合并铁律不变**：无论何种权限级别，PR 合并始终由 Human 操作。
