@@ -2,6 +2,29 @@
 
 > **适用范围**：仅适用于 Next.js App Router 项目。通用安全规范见 `base/security.md`。
 
+## 密钥与环境变量（Next.js）
+- 敏感配置存放在 `.env.local`，该文件必须在 `.gitignore` 中
+- 新增环境变量同步更新 `.env.example`
+- 只有 `NEXT_PUBLIC_` 前缀的变量会暴露给浏览器，敏感信息禁止使用此前缀
+
+## 输入校验（Next.js）
+- 使用 Zod 进行结构校验
+
+```typescript
+import { z } from 'zod';
+
+const createPostSchema = z.object({
+  title: z.string().min(1).max(200),
+  content: z.string().min(1),
+});
+
+// 在 API Route / Server Action 入口处校验
+const body = createPostSchema.parse(await req.json());
+```
+
+## 依赖安全（Next.js）
+- 定期运行 `bun audit`，修复高危漏洞
+
 ## 认证（Better Auth）
 - 所有需要登录的 API Route 必须在处理业务前验证 session
 - 使用 Better Auth 提供的 `auth.api.getSession` 获取当前用户，禁止自行解析 cookie 或 JWT
