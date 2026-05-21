@@ -46,10 +46,13 @@ description: "从 Linear 任务到生产上线的标准化工作流。读取 Lin
 
 > ⛔ **不主动标记 Done**，等待 Human 明确说 "done" 后再执行收尾。
 
-1. 使用 Linear MCP `save_comment` 在任务中添加评论，格式：
+1. 使用 Linear MCP `save_comment` 在任务中添加评论（使用折叠区块格式）：
 
-```
-✅ 开发完成，等待 Human 确认 Done。
+**评论格式：**
+```markdown
++++ ✅ 开发完成 | {任务标题} | 触发：Human 创建任务后自动执行
+
+**摘要**：{一句话总结开发完成情况}
 
 ## 实施总结
 
@@ -64,6 +67,8 @@ description: "从 Linear 任务到生产上线的标准化工作流。读取 Lin
 - [值得注意的地方]
 
 🤖 由 [模型名称] 生成
+
++++
 ```
 
 评论内容要求：

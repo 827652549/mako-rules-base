@@ -167,3 +167,44 @@ PROJECT_ID=$(issue.project.id)       # 从主任务 issue 中直接读取
 
 **Linear 评论中**（用户已经在 Linear 里）：
 - 不需要输出 Linear 链接，只输出 PR / Preview / Production 等外部链接
+
+### Agent 评论格式（折叠区块）
+
+Agent 写入 Linear 的过程态评论必须使用折叠区块，避免评论过长导致 Human 滚动困难。
+
+**格式模板：**
+```markdown
++++ {emoji} {Agent名称} | {内容总结} | 触发：{如何触发的}
+
+[详细内容，包括：
+- 执行步骤
+- 产出摘要
+- 关键决策点
+- 需要 Human 关注的事项]
+
++++
+```
+
+**折叠区块语法说明：**
+- `+++` 是 Linear 支持的折叠区块标记
+- 第一行 `+++` 后面的内容是折叠标题，Human 可以看到
+- 两个 `+++` 之间是折叠内容，需要点击展开才能看到
+- 标题必须包含：Agent 名称 + 内容总结 + 触发方式
+
+**各 Agent 折叠区块标题示例：**
+
+| Agent | 标题格式 | 示例 |
+|-------|---------|------|
+| PRD Agent | `+++ 📋 PRD Agent | 需求分析总结 | 触发：Human 创建 issue 后自动执行` | `+++ 📋 PRD Agent | 需求分析总结 | 触发：Human 创建 issue 后自动执行` |
+| UX Agent | `+++ 🎨 UX Agent | 用户体验方案 | 触发：PRD 完成后自动执行` | `+++ 🎨 UX Agent | 用户体验方案 | 触发：PRD 完成后自动执行` |
+| UI Agent | `+++ 🖌️ UI Agent | 视觉设计规范 | 触发：UX 方案完成后自动执行` | `+++ 🖌️ UI Agent | 视觉设计规范 | 触发：UX 方案完成后自动执行` |
+| TRD Agent | `+++ 📋 TRD Agent | 技术方案 | 触发：PRD/UX/UI 完成后自动执行` | `+++ 📋 TRD Agent | 技术方案 | 触发：PRD/UX/UI 完成后自动执行` |
+| Task Breakdown | `+++ 📋 Task Breakdown | 任务拆分 | 触发：TRD 完成后自动执行` | `+++ 📋 Task Breakdown | 任务拆分 | 触发：TRD 完成后自动执行` |
+| Test Report | `+++ 🧪 Test Report | 测试结果 | 触发：开发完成后自动执行` | `+++ 🧪 Test Report | 测试结果 | 触发：开发完成后自动执行` |
+
+**折叠区块内容要求：**
+1. 摘要放在最前面（折叠标题已经包含摘要，但展开后也要有摘要）
+2. 详细内容用二级标题分隔
+3. 关键决策点用加粗标注
+4. 需要 Human 关注的事项用 ⚠️ 标记
+5. 代码示例用代码块包裹
