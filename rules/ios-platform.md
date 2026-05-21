@@ -5,3 +5,4 @@
 
 @rules/ios/workflow.md
 @rules/ios/swift-style.md
+@rules/ios/simulator-mcp.md

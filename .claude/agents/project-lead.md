@@ -21,6 +21,20 @@ tools:
   - mcp__linear__save_project
   - mcp__linear__get_project
   - mcp__linear__list_projects
+  - mcp__ios-simulator__get_booted_sim_id
+  - mcp__ios-simulator__open_simulator
+  - mcp__ios-simulator__screenshot
+  - mcp__ios-simulator__ui_view
+  - mcp__ios-simulator__ui_describe_all
+  - mcp__ios-simulator__ui_describe_point
+  - mcp__ios-simulator__ui_find_element
+  - mcp__ios-simulator__ui_tap
+  - mcp__ios-simulator__ui_swipe
+  - mcp__ios-simulator__ui_type
+  - mcp__ios-simulator__install_app
+  - mcp__ios-simulator__launch_app
+  - mcp__ios-simulator__record_video
+  - mcp__ios-simulator__stop_recording
 maxTurns: 100
 ---
 
