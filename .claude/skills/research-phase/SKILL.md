@@ -47,7 +47,7 @@ allowed-tools:
 调用 PRD Agent 执行需求分析：
 
 ```
-Agent("prd-agent", prompt="执行以下任务：
+Agent("prd-agent", prompt="你是 PRD Agent，负责分析需求并产出 PRD。
 
 ## 任务
 分析 Linear issue 的需求背景，产出 PRD
@@ -80,7 +80,7 @@ Agent("prd-agent", prompt="执行以下任务：
 PRD 完成后，调用 UX Agent：
 
 ```
-Agent("ux-agent", prompt="执行以下任务：
+Agent("ux-agent", prompt="你是 UX Agent，负责产出用户体验方案。
 
 ## 任务
 基于 PRD，产出用户体验方案
@@ -114,7 +114,7 @@ Agent("ux-agent", prompt="执行以下任务：
 UX 方案完成后，调用 UI Agent：
 
 ```
-Agent("ui-agent", prompt="执行以下任务：
+Agent("ui-agent", prompt="你是 UI Agent，负责产出视觉设计规范。
 
 ## 任务
 基于 UX 方案，产出视觉设计规范
@@ -158,7 +158,7 @@ Agent("ui-agent", prompt="执行以下任务：
 PRD + UX + UI 完成后，调用 TRD Agent 和 Task Breakdown Agent：
 
 ```
-Agent("trd-agent", prompt="执行以下任务：
+Agent("trd-agent", prompt="你是 TRD Agent，负责产出技术方案。
 
 ## 任务
 基于 PRD + UX + UI 三份产物，产出 TRD
@@ -186,7 +186,7 @@ Agent("trd-agent", prompt="执行以下任务：
 ```
 
 ```
-Agent("task-breakdown-agent", prompt="执行以下任务：
+Agent("task-breakdown-agent", prompt="你是 Task Breakdown Agent，负责产出任务拆分。
 
 ## 任务
 基于 PRD + UX + UI + TRD，产出任务拆分
