@@ -188,9 +188,19 @@ Skill("iterm2-badge", "MAK-301:添加changelog页面 [Todo]")
 | Backlog | ✅ 自动推进到 Todo，继续执行 | ✅ 自动推进到 Todo，继续执行 | ✅ 自动推进到 Todo，继续执行 |
 | Todo | ✅ 自动推进到 In Progress，调用 `/research-phase`，完成后直接派发开发 | 调用 `/research-phase`，完成后输出方案摘要，**等待 Human 确认后再推进** | 调用 `/research-phase`，完成后直接派发开发 |
 | In Progress | 读取未完成子任务，逐个派发 `repo-worker` Agent 并发执行 | 读取未完成子任务，逐个派发 `repo-worker` Agent 并发执行 | 读取未完成子任务，逐个派发 `repo-worker` Agent 并发执行 |
-| 测试中 | 等待 `/test-phase` Skill 执行完毕，根据结果决策 | 等待 `/test-phase` Skill 执行完毕，根据结果决策 | 等待 `/test-phase` Skill 执行完毕，根据结果决策 |
+| 测试中 | 等待 `/test-phase` Skill 执行完毕（iOS 平台自动走 iOS 分支），根据结果决策 | 等待 `/test-phase` Skill 执行完毕（iOS 平台自动走 iOS 分支），根据结果决策 | 等待 `/test-phase` Skill 执行完毕（iOS 平台自动走 iOS 分支），根据结果决策 |
 | 测试通过 | ⛔ **不主动标记 Done**，输出汇总，等待 Human 说 "done" | ⛔ **不主动标记 Done**，输出汇总，等待 Human 说 "done" | ⛔ **不主动标记 Done**，输出汇总，等待 Human 说 "done" |
 | Done | Human 确认后执行收尾（更新标题、清理 worktree、Badge） | Human 确认后执行收尾 | Human 确认后执行收尾 |
+
+### iOS 平台测试注意事项
+
+当主任务所在项目为 iOS 平台时（项目根目录包含 `.xcodeproj` 或 `.xcworkspace`），test-phase 会自动执行 iOS 平台分支：
+
+1. **模拟器构建验证**：`xcodebuild build` 确认编译通过
+2. **真机检测与安装**：检测连接的真机并尝试 `xcodebuild install`
+3. **UI Smoke Test**：通过 iOS Simulator MCP 截图验证关键页面
+
+> ⚠️ 如果未检测到真机连接，test-phase 会在报告中标注警告但不阻塞流程。Human 需注意：相机、Vision ANE、SwiftData #Predicate、推送通知等场景需要在真机上手动验证。
 
 ## Done 状态输出规范
 

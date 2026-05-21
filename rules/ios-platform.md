@@ -6,3 +6,4 @@
 @rules/ios/workflow.md
 @rules/ios/swift-style.md
 @rules/ios/simulator-mcp.md
+@rules/ios/real-device-gate.md
