@@ -170,7 +170,12 @@ PROJECT_ID=$(issue.project.id)       # 从主任务 issue 中直接读取
 
 ### Agent 评论格式（折叠区块）
 
-Agent 写入 Linear 的过程态评论必须使用折叠区块，避免评论过长导致 Human 滚动困难。
+**核心原则：只有 Agent 有评论的能力，Skill 只是协调者，不直接写评论。**
+
+**架构说明：**
+- **Agent**：独立执行者，有自己的身份（PRD Agent、UX Agent、UI Agent、TRD Agent、repo-worker 等）
+- **Skill**：project-lead 调用的工具/流程（research-phase、test-phase、release-phase 等），不直接写评论
+- **写评论的时机**：Agent 执行完任务后，用自己的名称写评论
 
 **格式模板：**
 ```markdown
@@ -189,8 +194,16 @@ Agent 写入 Linear 的过程态评论必须使用折叠区块，避免评论过
 - `+++` 是 Linear 支持的折叠区块标记
 - 第一行 `+++` 后面的内容是折叠标题，Human 可以看到
 - 两个 `+++` 之间是折叠内容，需要点击展开才能看到
-- **标题格式**：`+++ {emoji} {当前执行者名称} | {内容总结} | 触发：{如何触发的} +++`
-- **关键原则**：当前执行者是谁，就用谁的名称。不需要枚举，动态填写即可。
+- **标题格式**：`+++ {emoji} {Agent名称} | {内容总结} | 触发：{如何触发的} +++`
+- **关键原则**：Agent 写评论时用自己的名称，不需要枚举，动态填写即可。
+
+**各 Agent 说明：**
+- **PRD Agent**：产出 PRD，用 "PRD Agent" 作为名称
+- **UX Agent**：产出 UX 方案，用 "UX Agent" 作为名称
+- **UI Agent**：产出 UI 设计，用 "UI Agent" 作为名称
+- **TRD Agent**：产出 TRD，用 "TRD Agent" 作为名称
+- **repo-worker**：执行代码变更，用 "repo-worker" 作为名称
+- **project-lead**：协调者，用 "project-lead" 作为名称
 
 **折叠区块内容要求：**
 1. 摘要放在最前面（折叠标题已经包含摘要，但展开后也要有摘要）
