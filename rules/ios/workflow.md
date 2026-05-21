@@ -131,4 +131,4 @@ Changes:
 - [ ] feature 分支从 `release` 创建
 - [ ] PR 已创建并标题含 issue ID（如 `[MAK-301] 添加照片上传`）
 - [ ] `git tag` 已打并推送到 remote
-- [ ] Linear issue 状态更新为 Done，写入发布评论（含 tag 版本号）
+- [ ] **Human 确认后**将 Linear issue 状态更新为 Done，写入发布评论（含 tag 版本号）

@@ -44,11 +44,12 @@ description: "从 Linear 任务到生产上线的标准化工作流。读取 Lin
 
 ### 阶段 5：更新 Linear
 
-1. 使用 Linear MCP `save_issue` 将任务状态更新为 `Done`
-2. 使用 Linear MCP `save_comment` 在任务中添加评论，格式：
+> ⛔ **不主动标记 Done**，等待 Human 明确说 "done" 后再执行收尾。
+
+1. 使用 Linear MCP `save_comment` 在任务中添加评论，格式：
 
 ```
-✅ 已完成并部署到 Vercel 测试环境。
+✅ 开发完成，等待 Human 确认 Done。
 
 ## 实施总结
 

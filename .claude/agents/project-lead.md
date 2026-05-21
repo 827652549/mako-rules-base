@@ -189,7 +189,8 @@ Skill("iterm2-badge", "MAK-301:添加changelog页面 [Todo]")
 | Todo | ✅ 自动推进到 In Progress，调用 `/research-phase`，完成后直接派发开发 | 调用 `/research-phase`，完成后输出方案摘要，**等待 Human 确认后再推进** | 调用 `/research-phase`，完成后直接派发开发 |
 | In Progress | 读取未完成子任务，逐个派发 `repo-worker` Agent 并发执行 | 读取未完成子任务，逐个派发 `repo-worker` Agent 并发执行 | 读取未完成子任务，逐个派发 `repo-worker` Agent 并发执行 |
 | 测试中 | 等待 `/test-phase` Skill 执行完毕，根据结果决策 | 等待 `/test-phase` Skill 执行完毕，根据结果决策 | 等待 `/test-phase` Skill 执行完毕，根据结果决策 |
-| Done | 输出 Linear 快捷链接，结束会话 | 输出 Linear 快捷链接，结束会话 | 输出 Linear 快捷链接，结束会话 |
+| 测试通过 | ⛔ **不主动标记 Done**，输出汇总，等待 Human 说 "done" | ⛔ **不主动标记 Done**，输出汇总，等待 Human 说 "done" | ⛔ **不主动标记 Done**，输出汇总，等待 Human 说 "done" |
+| Done | Human 确认后执行收尾（更新标题、清理 worktree、Badge） | Human 确认后执行收尾 | Human 确认后执行收尾 |
 
 ## Done 状态输出规范
 
@@ -349,38 +350,30 @@ Skill("iterm2-badge", "MAK-301:添加changelog页面 [Todo]")
     # 获取部署状态和 URL
     gh api "repos/$GITHUB_REPO/deployments/{id}/statuses" --jq '.[0] | {state, target_url}'
     ```
-18. 验收通过后，将主任务状态改为"Done"，**同步更新 iTerm2 Badge**
-19. **更新标题追加完成时间**：获取北京时间并追加到标题末尾
-    ```bash
-    TZ=Asia/Shanghai date "+%Y-%m-%d-%H-%M"
-    # 输出示例: 2026-05-10-23-31
-    # 调用 mcp__linear__save_issue(id, title="原标题 [2026-05-10-23-31]")
+18. 在最终评论中写入 Production URL（格式：`🔗 **Production**: {url}`）
+19. **在 Claude Code 终端 session 中输出最终汇总**：
     ```
-20. 在最终评论中写入 Production URL（格式：`🔗 **Production**: {url}`）
-21. **在 Claude Code 终端 session 中输出最终汇总**：
-    ```
-    ✅ **MAK-366 已完成**
+    ✅ **{ISSUE_ID} 开发完成，等待 Human 确认 Done**
     📋 **linear://issue/{ISSUE_ID}**
     🔗 **Production**: {production_url}
     ```
+20. **⛔ 不主动标记 Done**：输出汇总后停止，等待 Human 明确说 "done"。
+    Human 确认后执行收尾：
+    - 将主任务状态改为"Done"，**同步更新 iTerm2 Badge**
+    - **更新标题追加完成时间**：
+      ```bash
+      TZ=Asia/Shanghai date "+%Y-%m-%d-%H-%M"
+      # 调用 mcp__linear__save_issue(id, title="原标题 [2026-05-10-23-31]")
+      ```
+    - **清理 Worktree**：
+      ```bash
+      cd "$REPO_ROOT"
+      git worktree remove "$WORKTREE_NAME"
+      git branch -d "feature/$ISSUE_ID"
+      git checkout release && git pull
+      ```
 
-#### 第七步：清理 Worktree（必须执行）
-22. **PR 合并后删除 worktree**：
-    ```bash
-    # 切回主仓库
-    cd "$REPO_ROOT"
-
-    # 删除 worktree
-    git worktree remove "$WORKTREE_NAME"
-
-    # 删除本地 feature 分支
-    git branch -d "feature/$ISSUE_ID"
-
-    # 切换回 release 并拉取最新
-    git checkout release && git pull
-    ```
-23. 确保下次唤醒时处于干净的 release 分支状态
-    （Badge 保留，新任务启动时 Boot Sequence 步骤 6 会自动覆盖）
+> 清理 Worktree 已合并到步骤 20 的收尾流程中（Human 确认 Done 后执行）。
 
 ## Anti-Duplicate 防重复
 
@@ -421,10 +414,14 @@ Skill("iterm2-badge", "MAK-301:添加changelog页面 [Todo]")
 
 ## ⛔ Done 前 PR 合并验证门控
 
-**标记 Done 之前，必须通过 `gh pr view` 验证 PR 状态为 `MERGED`。未验证或验证未通过，禁止执行任何 Done 操作（状态变更、标题追加、清理 worktree）。**
+**标记 Done 之前，必须同时满足两个条件：**
+1. **PR 已合并**：通过 `gh pr view` 验证 PR 状态为 `MERGED`
+2. **Human 明确确认**：Human 在 Linear 评论或 session 中说 "done"
+
+未满足任一条件，禁止执行任何 Done 操作（状态变更、标题追加、清理 worktree）。
 
 - 验证命令：`gh pr view "feature/$ISSUE_ID" --json state --jq '.state'`
-- 仅 `MERGED` 状态允许继续
+- 仅 `MERGED` 状态 + Human "done" 才允许继续
 - `OPEN` → 停止并提示 Human 合并
 - `CLOSED`（未合并）→ 停止并提示 Human 确认
 - 违反此规则（跳过验证直接标记 Done）= 严重事故
