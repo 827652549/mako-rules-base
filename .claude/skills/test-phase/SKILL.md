@@ -31,6 +31,16 @@ allowed-tools:
 REPO_ROOT=$(git rev-parse --show-toplevel)
 GITHUB_REMOTE=$(git remote get-url origin)
 GITHUB_REPO=$(echo "$GITHUB_REMOTE" | sed -E 's#.*github\.com[:/](.+?)(\.git)?$#\1#')
+
+# 检测项目平台类型
+if [ -f "$REPO_ROOT/Package.swift" ] || [ -d "$REPO_ROOT"/*.xcodeproj ] || [ -d "$REPO_ROOT"/*.xcworkspace ]; then
+  PLATFORM="ios"
+elif [ -f "$REPO_ROOT/package.json" ] && grep -q '"next"' "$REPO_ROOT/package.json" 2>/dev/null; then
+  PLATFORM="nextjs"
+else
+  PLATFORM="unknown"
+fi
+echo "Detected platform: $PLATFORM"
 ```
 
 ### 1. 本地构建验证
@@ -42,6 +52,42 @@ cd "$REPO_ROOT" && bun run build
 - 检查构建是否成功
 - 记录路由数量和类型（Static / SSG / Dynamic）
 - 构建失败则直接标记测试失败，跳过后续步骤
+
+### 1b. iOS 平台专属验证（仅 iOS 项目）
+
+当 `PLATFORM == "ios"` 时执行此步骤，跳过后续的 Vercel 部署和 HTTP 探针（步骤 2-3）：
+
+#### 构建验证
+```bash
+cd "$REPO_ROOT"
+# 模拟器构建
+xcodebuild build -scheme <scheme> -destination 'platform=iOS Simulator,name=iPhone 16' -quiet 2>&1 | tail -20
+```
+
+#### 真机检测与安装
+```bash
+# 检查是否有连接的真机
+DEVICE_ID=$(xcrun xctrace list devices 2>/dev/null | grep -v "Simulator" | grep -v "== " | head -1 | awk '{print $NF}' | tr -d '()')
+
+if [ -n "$DEVICE_ID" ]; then
+  echo "Found physical device: $DEVICE_ID"
+  # 真机安装
+  xcodebuild install -scheme <scheme> -destination "id=$DEVICE_ID" 2>&1 | tail -10
+  INSTALL_STATUS=$?
+else
+  echo "No physical device connected, skipping real device install"
+  echo "⚠️ 真机验证门控: 未检测到连接的真机，以下场景无法验证:"
+  echo "  - 相机硬件调用"
+  echo "  - Vision Framework ANE 加速"
+  echo "  - SwiftData #Predicate 真机 bug"
+  echo "  - 推送通知 APNs"
+  INSTALL_STATUS="skipped"
+fi
+```
+
+#### UI Smoke Test
+- 使用 iOS Simulator MCP（`mcp__ios-simulator__screenshot` + `mcp__ios-simulator__ui_describe_all`）对模拟器截图验证关键页面
+- 如有真机连接，标注为"已通过真机安装验证"
 
 ### 2. 获取 Vercel 部署信息
 
@@ -94,6 +140,11 @@ curl -sL -o /dev/null -w "%{http_code}" {url}/rules
 - 存在失败项 → 列出问题，建议 project-lead 保持"测试中"状态
 - 构建失败 → 建议 project-lead 退回"开发中"
 
+#### iOS 平台额外决策
+- 真机安装跳过 → 在报告中标注 ⚠️ 警告（不阻塞，但需 Human 注意）
+- 真机安装失败 → 标记测试失败
+- 模拟器构建失败 → 标记测试失败，建议退回开发
+
 ## 产物
 
 将测试报告写入 Linear 评论（前缀 `**🧪 Test Report**`）：
@@ -106,6 +157,8 @@ curl -sL -o /dev/null -w "%{http_code}" {url}/rules
 - Vercel Preview: ✅/❌
 - Vercel Production: ✅/❌ / ⏳未部署
 - HTTP 探针: {passCount}/{totalCount} 通过
+- iOS 构建: ✅/❌（仅 iOS 项目）
+- 真机安装: ✅/❌/⏭️跳过（仅 iOS 项目）
 - 验收标准: {passCount}/{totalCount} 通过
 
 ## 🔗 环境链接
