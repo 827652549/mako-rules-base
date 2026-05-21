@@ -189,17 +189,21 @@ Agent 写入 Linear 的过程态评论必须使用折叠区块，避免评论过
 - `+++` 是 Linear 支持的折叠区块标记
 - 第一行 `+++` 后面的内容是折叠标题，Human 可以看到
 - 两个 `+++` 之间是折叠内容，需要点击展开才能看到
-- 标题必须包含：Agent 名称 + 内容总结 + 触发方式
+- 标题必须包含：执行者名称 + 内容总结 + 触发方式
 
-**各 Agent 折叠区块标题示例：**
+**各执行者折叠区块标题示例：**
 
-| Agent | 标题格式 | 示例 |
-|-------|---------|------|
-| PRD Agent | `+++ 📋 PRD Agent | 需求分析总结 | 触发：Human 创建 issue 后自动执行` | `+++ 📋 PRD Agent | 需求分析总结 | 触发：Human 创建 issue 后自动执行` |
-| UX Agent | `+++ 🎨 UX Agent | 用户体验方案 | 触发：PRD 完成后自动执行` | `+++ 🎨 UX Agent | 用户体验方案 | 触发：PRD 完成后自动执行` |
-| UI Agent | `+++ 🖌️ UI Agent | 视觉设计规范 | 触发：UX 方案完成后自动执行` | `+++ 🖌️ UI Agent | 视觉设计规范 | 触发：UX 方案完成后自动执行` |
-| TRD Agent | `+++ 📋 TRD Agent | 技术方案 | 触发：PRD/UX/UI 完成后自动执行` | `+++ 📋 TRD Agent | 技术方案 | 触发：PRD/UX/UI 完成后自动执行` |
-| Task Breakdown | `+++ 📋 Task Breakdown | 任务拆分 | 触发：TRD 完成后自动执行` | `+++ 📋 Task Breakdown | 任务拆分 | 触发：TRD 完成后自动执行` |
+| 执行者 | 标题格式 | 触发时机 |
+|--------|---------|---------|
+| PRD Agent | `+++ 📋 PRD Agent | {内容总结} | 触发：{触发方式}` | Human 创建 issue 后自动执行 |
+| UX Agent | `+++ 🎨 UX Agent | {内容总结} | 触发：{触发方式}` | PRD 完成后自动执行 |
+| UI Agent | `+++ 🖌️ UI Agent | {内容总结} | 触发：{触发方式}` | UX 方案完成后自动执行 |
+| TRD Agent | `+++ 📋 TRD Agent | {内容总结} | 触发：{触发方式}` | PRD/UX/UI 完成后自动执行 |
+| Task Breakdown | `+++ 📋 Task Breakdown | {内容总结} | 触发：{触发方式}` | TRD 完成后自动执行 |
+| repo-worker | `+++ 🔧 repo-worker | {内容总结} | 触发：{触发方式}` | project-lead 派发任务后自动执行 |
+| test-phase | `+++ 🧪 test-phase | {内容总结} | 触发：{触发方式}` | 开发完成后自动执行 |
+| release-phase | `+++ 🚀 release-phase | {内容总结} | 触发：{触发方式}` | Human 显式授权后自动执行 |
+| report-phase | `+++ 📊 report-phase | {内容总结} | 触发：{触发方式}` | 项目完成后自动生成 |
 
 **折叠区块内容要求：**
 1. 摘要放在最前面（折叠标题已经包含摘要，但展开后也要有摘要）
