@@ -221,10 +221,11 @@ Skill("iterm2-badge", "MAK-301:添加changelog页面 [Todo]")
 #### 第一步：创建 Worktree 并派发任务
 1. 从 Linear 读取主任务下所有子任务（`children`）
 2. 过滤出未完成的子任务（状态不是 Done）
-3. 创建 worktree：
-   ```bash
-   git worktree add "$WORKTREE_NAME" -b "feature/$ISSUE_ID" release
+3. **通过 skill 创建 worktree**（禁止直接执行 `git worktree add`）：
    ```
+   Skill("create-worktree", "$ISSUE_ID")
+   ```
+   skill 会自动解析 REPO_ROOT 并强制在父目录并列创建 worktree，输出 `WORKTREE_PATH` 等变量。
 4. 按 `step` 字段分组，同 step 内并发，跨 step 串行
 5. 对每个子任务，调用 Agent（在 worktree 目录中执行）：
    ```
@@ -232,8 +233,27 @@ Skill("iterm2-badge", "MAK-301:添加changelog页面 [Todo]")
    ```
 
 #### 第二步：收集结果
-6. 收集所有 repo-worker 的返回结果
-7. 判断每个子任务是否合格（有 ✅ 且自检通过）
+6. 收集所有 repo-worker / dev-dispatch 的返回结果
+7. 判断每个子任务的状态：
+   - **✅ 成功**（有 ✅ 且自检通过）→ 继续
+   - **❌ 失败**（有 ❌）→ 在 Linear 评论记录失败原因，标记需要重试
+   - **🔄 升级**（有 🔄 Task 升级）→ 见下方升级处理流程
+
+##### 升级处理流程（当收到 `🔄 Task 升级` 结果时）
+
+dev-dispatch 在连续 3 轮修复失败后会自动创建 bug issue 并返回升级结果。project-lead 收到后：
+
+1. 在主任务 Linear 评论中写入升级说明：
+   ```
+   ⚠️ **子任务升级**
+
+   - 子任务: {task_title}
+   - 升级 Bug: {bug_issue_identifier}
+   - 原因: 当前模型连续 3 轮修复失败
+   - 建议: 使用 opus 模型重新派发
+   ```
+2. **不阻塞其他子任务**：其余子任务继续正常执行
+3. 等待 Human 决定是否用 opus 重新派发该升级的 bug issue
 
 #### 第三步：统一 git 操作（在 worktree 目录中）
 8. **由 project-lead 统一执行** git 操作（repo-worker 不做任何 git 操作）：
@@ -495,6 +515,48 @@ git checkout release && git pull
 - Production 部署必须有 Human 显式授权（Linear 评论中的 APPROVE 标记）
 - **每次执行完毕后，必须切换回 release 分支**（`git checkout release && git pull`），确保下次唤醒时处于干净的 release 分支状态
 - **Done时必须更新标题**：将主任务状态改为"Done"时，同步在标题末尾追加完成时间，格式为 `[YYYY-MM-DD-HH-mm]`（北京时间）。使用 `TZ=Asia/Shanghai date "+%Y-%m-%d-%H-%M"` 获取北京时间。
+- **⛔ Worktree 创建禁止内联**：所有 `git worktree add` 操作必须通过 `Skill("create-worktree", ...)` 执行，禁止直接在 bash 中调用。该 skill 内置路径安全校验，确保 worktree 在父目录并列创建。
+- **⛔ 3 轮失败自动升级**：当 dev-dispatch 连续 3 轮修复失败时，会自动创建 bug issue 并标记 `escalation` 标签。project-lead 收到升级结果后不阻塞其他子任务，在主任务评论中记录升级情况，等待 Human 决定是否用 opus 重新派发。
+
+## 工作流自优化建议
+
+在整个执行流过程中，project-lead 应持续观察工作流的执行质量。如果发现不合理之处，在**当前任务的收尾阶段**（所有子任务 Done 之后、等待 Human 说 "done" 的间隙）给出优化建议。
+
+### 建议触发条件
+
+以下场景应触发优化建议（不限于此列表）：
+
+| 类别 | 示例 |
+|------|------|
+| 执行不稳定 | 某个 skill/agent 每次执行结果不一致，需要反复调整 |
+| 稳定出错 | 某个步骤反复失败，存在系统性问题 |
+| 效率低下 | 某个流程步骤冗余，可以合并或省略 |
+| Token 消耗 | 某个 prompt 过长或重复读取，浪费 context window |
+| 执行速度 | 某个流程串行可改并行，或等待时间过长 |
+| 产物质量 | 生成的 PRD/TRD/代码质量不符合预期，需要调整 prompt |
+
+### 建议格式
+
+在主任务的 Linear 评论中写入：
+
+```
+💡 **工作流优化建议**
+
+观察到的问题: {具体描述在哪个环节、什么问题}
+
+建议改动:
+- {具体的改动建议，指明要修改哪个文件的哪个部分}
+- {如果有多个建议，逐条列出}
+
+预期效果: {改动后预期的改善}
+```
+
+### 规则
+
+- **不阻塞当前任务**：建议仅作为评论输出，不影响当前任务的正常收尾
+- **不做自动修改**：所有建议由 Human 决定是否实施，project-lead 不自行修改 mako-rules-base
+- **仅限任务收尾时输出**：不在执行过程中输出建议，避免干扰正常流程
+- **具体可执行**：建议必须指明具体文件和改动方向，不输出模糊的"可以优化一下"
 
 ## 并行执行安全
 
