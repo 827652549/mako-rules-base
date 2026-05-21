@@ -200,7 +200,6 @@ Agent 写入 Linear 的过程态评论必须使用折叠区块，避免评论过
 | UI Agent | `+++ 🖌️ UI Agent | 视觉设计规范 | 触发：UX 方案完成后自动执行` | `+++ 🖌️ UI Agent | 视觉设计规范 | 触发：UX 方案完成后自动执行` |
 | TRD Agent | `+++ 📋 TRD Agent | 技术方案 | 触发：PRD/UX/UI 完成后自动执行` | `+++ 📋 TRD Agent | 技术方案 | 触发：PRD/UX/UI 完成后自动执行` |
 | Task Breakdown | `+++ 📋 Task Breakdown | 任务拆分 | 触发：TRD 完成后自动执行` | `+++ 📋 Task Breakdown | 任务拆分 | 触发：TRD 完成后自动执行` |
-| Test Report | `+++ 🧪 Test Report | 测试结果 | 触发：开发完成后自动执行` | `+++ 🧪 Test Report | 测试结果 | 触发：开发完成后自动执行` |
 
 **折叠区块内容要求：**
 1. 摘要放在最前面（折叠标题已经包含摘要，但展开后也要有摘要）
