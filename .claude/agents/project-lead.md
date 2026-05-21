@@ -231,12 +231,15 @@ Skill("iterm2-badge", "MAK-301:添加changelog页面 [Todo]")
 #### 第一步：创建 Worktree 并派发任务
 1. 从 Linear 读取主任务下所有子任务（`children`）
 2. 过滤出未完成的子任务（状态不是 Done）
-3. **通过 skill 创建 worktree**（禁止直接执行 `git worktree add`）：
+3. **先更新 release 分支**（确保 worktree 基于最新代码）：
+   ```bash
+   cd "$REPO_ROOT" && git checkout release && git pull
    ```
-   Skill("create-worktree", "$ISSUE_ID")
+4. 创建 worktree：
+   ```bash
+   git worktree add "$WORKTREE_NAME" -b "feature/$ISSUE_ID" release
    ```
-   skill 会自动解析 REPO_ROOT 并强制在父目录并列创建 worktree，输出 `WORKTREE_PATH` 等变量。
-4. 按 `step` 字段分组，同 step 内并发，跨 step 串行
+5. 按 `step` 字段分组，同 step 内并发，跨 step 串行
 5. 对每个子任务，调用 Agent（在 worktree 目录中执行）：
    ```
    Agent("repo-worker", prompt="执行以下 Task:\n\n标题: {title}\n描述: {description}\n验收标准: {acceptance}\n\nPRD/TRD 上下文:\n{prd_summary}\n\n工作目录: $WORKTREE_PATH")
