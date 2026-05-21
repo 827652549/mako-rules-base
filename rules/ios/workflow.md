@@ -95,6 +95,34 @@ Changes:
 
 > `CFBundleVersion`（Build Number）在提交 App Store 时手动递增，不由 agent 管理。
 
+## 验收规范
+
+> 适用于所有 iOS 相关项目（纯 Swift / Expo / React Native）。
+
+### 第一步：模拟器验收（Agent 自主完成）
+
+构建 Release 版本到 iOS 模拟器，确认 UI 和基本功能正常：
+
+1. **构建 Release 版本**：
+   ```bash
+   # 纯 iOS/Swift 项目
+   xcodebuild -workspace <ProjectName>.xcworkspace \
+     -scheme <ProjectName> -configuration Release \
+     -destination "platform=iOS Simulator,name=iPhone 16" build
+   ```
+2. **安装并启动**：
+   ```bash
+   xcrun simctl install booted <app路径>
+   xcrun simctl launch booted <bundle_id>
+   ```
+3. **截图验证**：使用 `mcp__ios-simulator__screenshot` 确认页面正常显示
+4. **最小验收标准**：构建成功 + app 成功打开 + 截图可见正常 UI
+
+### 第二步：真机验收（Human 参与）
+
+- 模拟器验收通过后，构建部署到真机，请 Human 在设备上确认验收
+- 不标记 Done 直到 Human 在真机验收通过后显式确认
+
 ## 完整发布检查清单
 
 - [ ] feature 分支从 `release` 创建

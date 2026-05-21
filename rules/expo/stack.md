@@ -77,8 +77,32 @@ assets/                     # 静态资源（图标、字体、splash）
 
 ## 验收规范
 
+> 适用于所有 iOS 相关项目（Expo / React Native / 纯 Swift）。
+
+### 第一步：模拟器验收（Agent 自主完成）
+
+构建 Release 版本到 iOS 模拟器，确认 UI 和基本功能正常：
+
+1. **构建 Release 版本**：
+   ```bash
+   # Expo/RN 项目（需先 prebuild）
+   npx expo prebuild --platform ios
+   xcodebuild -workspace ios/<ProjectName>.xcworkspace \
+     -scheme <ProjectName> -configuration Release \
+     -destination "platform=iOS Simulator,name=iPhone 16" build
+   ```
+2. **安装并启动**：
+   ```bash
+   xcrun simctl install booted <app路径>
+   xcrun simctl launch booted <bundle_id>
+   ```
+3. **截图验证**：使用 `mcp__ios-simulator__screenshot` 确认页面正常显示
+4. **最小验收标准**：构建成功 + app 成功打开 + 截图可见正常 UI
+
+### 第二步：真机验收（Human 参与）
+
 - Expo 项目无法通过 Vercel Preview 验证 UI，**必须真机验收**
-- 构建成功部署到真机后，请 Human 在设备上确认验收
+- 模拟器验收通过后，构建部署到真机，请 Human 在设备上确认验收
 - 不标记 Done 直到 Human 在真机验收通过后显式确认
 
 ## macOS 注意事项
