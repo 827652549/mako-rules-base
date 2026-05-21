@@ -195,15 +195,20 @@ PROJECT_ID=$(issue.project.id)       # 从主任务 issue 中直接读取
 - 第一行 `+++` 后面的内容是折叠标题，Human 可以看到
 - 两个 `+++` 之间是折叠内容，需要点击展开才能看到
 - **标题格式**：`+++ {emoji} {Agent名称} | {内容总结} | 触发：{如何触发的} +++`
-- **关键原则**：Agent 写评论时用自己的名称，不需要枚举，动态填写即可。
 
-**各 Agent 说明：**
-- **PRD Agent**：产出 PRD，用 "PRD Agent" 作为名称
-- **UX Agent**：产出 UX 方案，用 "UX Agent" 作为名称
-- **UI Agent**：产出 UI 设计，用 "UI Agent" 作为名称
-- **TRD Agent**：产出 TRD，用 "TRD Agent" 作为名称
-- **repo-worker**：执行代码变更，用 "repo-worker" 作为名称
-- **project-lead**：协调者，用 "project-lead" 作为名称
+**如何获取当前 Agent 名称：**
+- 使用环境变量 `$CLAUDE_CODE_AGENT` 获取当前 agent 的名称
+- 例如：`AGENT_NAME="${CLAUDE_CODE_AGENT:-unknown}"`
+- Agent 写评论时用自己的名称，不需要枚举，动态填写即可
+
+**示例：**
+```bash
+# 在 bash 中获取 agent 名称
+AGENT_NAME="${CLAUDE_CODE_AGENT:-unknown}"
+
+# 生成折叠区块标题
+echo "+++ 📋 ${AGENT_NAME} | 需求分析总结 | 触发：Human 创建 issue 后自动执行"
+```
 
 **折叠区块内容要求：**
 1. 摘要放在最前面（折叠标题已经包含摘要，但展开后也要有摘要）
