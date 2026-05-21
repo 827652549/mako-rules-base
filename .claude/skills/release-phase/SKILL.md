@@ -119,10 +119,13 @@ echo "PROD_DEPLOY_TIMEOUT"
 
 ## 产物
 
-在 Linear 评论中写入（前缀 `**🚀 Release**`）：
+在 Linear 评论中写入（使用折叠区块格式）：
 
-```
-**🚀 Release**
+**评论格式：**
+```markdown
++++ 🚀 Release | 发布完成 | 触发：Human 显式授权后自动执行
+
+**摘要**：{一句话总结发布结果}
 
 ## 发布前审查
 {审查表格}
@@ -132,6 +135,8 @@ echo "PROD_DEPLOY_TIMEOUT"
 - Production URL: {url}
 - 部署状态: {success / failed}
 - CHANGELOG: {已更新 / 跳过（无代码变更）}
+
++++
 ```
 
 ## 约束

@@ -147,10 +147,13 @@ curl -sL -o /dev/null -w "%{http_code}" {url}/rules
 
 ## 产物
 
-将测试报告写入 Linear 评论（前缀 `**🧪 Test Report**`）：
+将测试报告写入 Linear 评论（使用折叠区块格式）：
 
-```
-**🧪 Test Report**
+**评论格式：**
+```markdown
++++ 🧪 Test Report | 测试结果 | 触发：开发完成后自动执行
+
+**摘要**：{一句话总结测试结果}
 
 ## 摘要
 - 构建: ✅/❌
@@ -180,6 +183,8 @@ curl -sL -o /dev/null -w "%{http_code}" {url}/rules
 
 ## 结论
 {通过/失败，建议下一步操作}
+
++++
 ```
 
 ## 约束

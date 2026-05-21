@@ -153,26 +153,35 @@ allowed-tools:
 
 ## 产物
 
-在 Linear Task 评论中写入：
+在 Linear Task 评论中写入（使用折叠区块格式）：
 
-```
-**✅ Task 完成**
+**成功时：**
+```markdown
++++ ✅ Task 完成 | {Task 标题} | 触发：project-lead 派发任务后自动执行
+
+**摘要**：{一句话总结 Task 完成情况}
 
 - 变更摘要: {summary}
 - 修改文件: {file list}
 - 诊断过程: {root cause}
 - 自检结果: {build/lint/test 结果}
 - 调试记录: {如有调试循环，附上表格}
+
++++
 ```
 
-失败时：
-```
-**❌ Task 失败**
+**失败时：**
+```markdown
++++ ❌ Task 失败 | {Task 标题} | 触发：project-lead 派发任务后自动执行
+
+**摘要**：{一句话总结 Task 失败原因}
 
 - 失败原因: {root cause}
 - 已尝试修复: {N} 轮
 - 各轮记录: {表格}
 - 需要协助: {具体说明需要什么帮助}
+
++++
 ```
 
 ## 约束

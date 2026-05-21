@@ -167,3 +167,55 @@ PROJECT_ID=$(issue.project.id)       # 从主任务 issue 中直接读取
 
 **Linear 评论中**（用户已经在 Linear 里）：
 - 不需要输出 Linear 链接，只输出 PR / Preview / Production 等外部链接
+
+### Agent 评论格式（折叠区块）
+
+**核心原则：只有 Agent 有评论的能力，Skill 只是协调者，不直接写评论。**
+
+**架构说明：**
+- **Agent**：独立执行者，有自己的身份（PRD Agent、UX Agent、UI Agent、TRD Agent、repo-worker 等）
+- **Skill**：project-lead 调用的工具/流程（research-phase、test-phase、release-phase 等），不直接写评论
+- **写评论的时机**：Agent 执行完任务后，用自己的名称写评论
+
+**格式模板：**
+```markdown
++++ {emoji} {Agent名称} | {内容总结} | 触发：{如何触发的}
+
+[详细内容，包括：
+- 执行步骤
+- 产出摘要
+- 关键决策点
+- 需要 Human 关注的事项]
+
++++
+```
+
+**折叠区块语法说明：**
+- `+++` 是 Linear 支持的折叠区块标记
+- 第一行 `+++` 后面的内容是折叠标题，Human 可以看到
+- 两个 `+++` 之间是折叠内容，需要点击展开才能看到
+- **标题格式**：`+++ {emoji} {Agent名称} | {内容总结} | 触发：{如何触发的} +++`
+
+**如何获取当前 Agent 名称：**
+- ⚠️ **不要使用 `$CLAUDE_CODE_AGENT`**，该环境变量是进程级的，所有 subagent 共享同一个值（通常是 "project-lead"）
+- ✅ **直接使用你在 prompt 中被定义的名称**，例如：
+  - 如果 prompt 说"你是 PRD Agent"，就用 "PRD Agent"
+  - 如果 prompt 说"你是 UX Agent"，就用 "UX Agent"
+  - 如果 prompt 说"你是 TRD Agent"，就用 "TRD Agent"
+  - 如果 prompt 说"你是 repo-worker"，就用 "repo-worker"
+
+**示例：**
+```markdown
+# PRD Agent 写评论时，直接使用硬编码名称
++++ 📋 PRD Agent | 需求分析总结 | 触发：Human 创建 issue 后自动执行
+
+# UX Agent 写评论时，直接使用硬编码名称
++++ 🎨 UX Agent | 用户体验方案 | 触发：PRD 完成后自动执行
+```
+
+**折叠区块内容要求：**
+1. 摘要放在最前面（折叠标题已经包含摘要，但展开后也要有摘要）
+2. 详细内容用二级标题分隔
+3. 关键决策点用加粗标注
+4. 需要 Human 关注的事项用 ⚠️ 标记
+5. 代码示例用代码块包裹
