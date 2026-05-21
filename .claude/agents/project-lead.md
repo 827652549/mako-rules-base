@@ -235,10 +235,11 @@ Skill("iterm2-badge", "MAK-301:添加changelog页面 [Todo]")
    ```bash
    cd "$REPO_ROOT" && git checkout release && git pull
    ```
-4. 创建 worktree：
-   ```bash
-   git worktree add "$WORKTREE_NAME" -b "feature/$ISSUE_ID" release
+4. **通过 skill 创建 worktree**（禁止直接执行 `git worktree add`）：
    ```
+   Skill("create-worktree", "$ISSUE_ID")
+   ```
+   skill 会自动解析 REPO_ROOT 并强制在父目录并列创建 worktree，输出 `WORKTREE_PATH` 等变量。
 5. 按 `step` 字段分组，同 step 内并发，跨 step 串行
 5. 对每个子任务，调用 Agent（在 worktree 目录中执行）：
    ```
