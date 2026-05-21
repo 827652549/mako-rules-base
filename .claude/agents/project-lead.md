@@ -189,7 +189,8 @@ Skill("iterm2-badge", "MAK-301:添加changelog页面 [Todo]")
 | Todo | ✅ 自动推进到 In Progress，调用 `/research-phase`，完成后直接派发开发 | 调用 `/research-phase`，完成后输出方案摘要，**等待 Human 确认后再推进** | 调用 `/research-phase`，完成后直接派发开发 |
 | In Progress | 读取未完成子任务，逐个派发 `repo-worker` Agent 并发执行 | 读取未完成子任务，逐个派发 `repo-worker` Agent 并发执行 | 读取未完成子任务，逐个派发 `repo-worker` Agent 并发执行 |
 | 测试中 | 等待 `/test-phase` Skill 执行完毕，根据结果决策 | 等待 `/test-phase` Skill 执行完毕，根据结果决策 | 等待 `/test-phase` Skill 执行完毕，根据结果决策 |
-| Done | 输出 Linear 快捷链接，结束会话 | 输出 Linear 快捷链接，结束会话 | 输出 Linear 快捷链接，结束会话 |
+| 测试通过 | ⛔ **不主动标记 Done**，输出汇总，等待 Human 说 "done" | ⛔ **不主动标记 Done**，输出汇总，等待 Human 说 "done" | ⛔ **不主动标记 Done**，输出汇总，等待 Human 说 "done" |
+| Done | Human 确认后执行收尾（更新标题、清理 worktree、Badge） | Human 确认后执行收尾 | Human 确认后执行收尾 |
 
 ## Done 状态输出规范
 
@@ -274,6 +275,30 @@ Skill("iterm2-badge", "MAK-301:添加changelog页面 [Todo]")
    ```
    **⚠️ 同一 MAK 任务 ID 下的所有代码变更必须提交到同一个 feature 分支、同一个 PR。** 不要拆成多个 PR。如果 PR 已创建但未合并，后续变更应追加到同一分支，PR 会自动更新。
 
+10. **更新 PR 标题和描述**（每次 push 后、通知 Human 前必须执行）：
+    根据实际 diff 内容更新 PR，确保 Human review 时看到准确的变更说明：
+    ```bash
+    cd "$WORKTREE_PATH"
+    # 查看完整 diff 以编写准确描述
+    git diff release..HEAD --stat
+    # 更新 PR 标题和描述
+    gh api repos/$GITHUB_REPO/pulls/{PR_NUMBER} -X PATCH \
+      -f title="$ISSUE_ID <基于实际变更的描述性标题>" \
+      -f body="$(cat <<'EOF'
+    ## Summary
+    <基于实际 diff 的变更汇总，分点列出>
+
+    ## Changes
+    | 文件 | 变更 |
+    |------|------|
+    | `<file>` | <具体改了什么> |
+
+    🤖 Generated with [Claude Code](https://claude.com/claude-code)
+    EOF
+    )"
+    ```
+    > ⚠️ `gh pr edit` 遇到 GraphQL projectCards 错误时，fallback 到 `gh api` 直接调用。
+
 #### 第四步半：获取 Preview URL
 9b. PR 创建后，启动**后台定时检查**获取 Vercel preview URL（非阻塞）：
     ```bash
@@ -349,38 +374,57 @@ Skill("iterm2-badge", "MAK-301:添加changelog页面 [Todo]")
     # 获取部署状态和 URL
     gh api "repos/$GITHUB_REPO/deployments/{id}/statuses" --jq '.[0] | {state, target_url}'
     ```
-18. 验收通过后，将主任务状态改为"Done"，**同步更新 iTerm2 Badge**
-19. **更新标题追加完成时间**：获取北京时间并追加到标题末尾
-    ```bash
-    TZ=Asia/Shanghai date "+%Y-%m-%d-%H-%M"
-    # 输出示例: 2026-05-10-23-31
-    # 调用 mcp__linear__save_issue(id, title="原标题 [2026-05-10-23-31]")
+18. 在最终评论中写入 Production URL（格式：`🔗 **Production**: {url}`）
+19. **在 Claude Code 终端 session 中输出最终汇总**：
     ```
-20. 在最终评论中写入 Production URL（格式：`🔗 **Production**: {url}`）
-21. **在 Claude Code 终端 session 中输出最终汇总**：
-    ```
-    ✅ **MAK-366 已完成**
+    ✅ **{ISSUE_ID} 开发完成，等待 Human 确认 Done**
     📋 **linear://issue/{ISSUE_ID}**
     🔗 **Production**: {production_url}
     ```
+20. **⛔ 不主动标记 Done**：输出汇总后停止，等待 Human 明确说 "done"。
 
-#### 第七步：清理 Worktree（必须执行）
-22. **PR 合并后删除 worktree**：
-    ```bash
-    # 切回主仓库
-    cd "$REPO_ROOT"
+#### 第七步：Human 确认后的收尾流程
 
-    # 删除 worktree
-    git worktree remove "$WORKTREE_NAME"
+Human 说 "done" 后，按顺序执行以下操作：
 
-    # 删除本地 feature 分支
-    git branch -d "feature/$ISSUE_ID"
+**7a. 合并验证门控**
+```bash
+PR_STATE=$(gh pr view "feature/$ISSUE_ID" --json state --jq '.state')
+# 必须为 "MERGED"，否则中止收尾
+```
+- 仅 `MERGED` 状态允许继续
+- `OPEN` → 停止，输出提示 `⏳ PR 尚未合并，请 Human 在 Linear/GitHub 中合并 PR`
+- `CLOSED`（未合并）→ 停止，输出提示 `⚠️ PR 已关闭但未合并，请 Human 确认意图`
+- **严禁跳过此验证直接标记 Done**
 
-    # 切换回 release 并拉取最新
-    git checkout release && git pull
-    ```
-23. 确保下次唤醒时处于干净的 release 分支状态
-    （Badge 保留，新任务启动时 Boot Sequence 步骤 6 会自动覆盖）
+**7b. 标记 Done + 更新标题**
+```bash
+# 获取北京时间
+TZ=Asia/Shanghai date "+%Y-%m-%d-%H-%M"
+# 输出示例: 2026-05-10-23-31
+```
+调用 `mcp__linear__save_issue`：
+- `state` → "Done"
+- `title` → "原标题 [2026-05-10-23-31]"
+同步更新 iTerm2 Badge → `[Done]`
+
+**7c. 清理 Worktree**
+```bash
+cd "$REPO_ROOT"
+# 删除 worktree
+git worktree remove "$WORKTREE_NAME"
+# 删除本地 feature 分支
+git branch -d "feature/$ISSUE_ID"
+# 切换回 release 并拉取最新
+git checkout release && git pull
+```
+
+**7d. 输出最终汇总**
+```
+✅ **{ISSUE_ID} 已完成**
+📋 **linear://issue/{ISSUE_ID}**
+🔗 **Production**: {production_url}
+```
 
 ## Anti-Duplicate 防重复
 
@@ -421,10 +465,14 @@ Skill("iterm2-badge", "MAK-301:添加changelog页面 [Todo]")
 
 ## ⛔ Done 前 PR 合并验证门控
 
-**标记 Done 之前，必须通过 `gh pr view` 验证 PR 状态为 `MERGED`。未验证或验证未通过，禁止执行任何 Done 操作（状态变更、标题追加、清理 worktree）。**
+**标记 Done 之前，必须同时满足两个条件：**
+1. **PR 已合并**：通过 `gh pr view` 验证 PR 状态为 `MERGED`
+2. **Human 明确确认**：Human 在 Linear 评论或 session 中说 "done"
+
+未满足任一条件，禁止执行任何 Done 操作（状态变更、标题追加、清理 worktree）。
 
 - 验证命令：`gh pr view "feature/$ISSUE_ID" --json state --jq '.state'`
-- 仅 `MERGED` 状态允许继续
+- 仅 `MERGED` 状态 + Human "done" 才允许继续
 - `OPEN` → 停止并提示 Human 合并
 - `CLOSED`（未合并）→ 停止并提示 Human 确认
 - 违反此规则（跳过验证直接标记 Done）= 严重事故
