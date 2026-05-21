@@ -9,6 +9,8 @@ allowed-tools:
   - Write
   - Bash
   - mcp__linear__save_comment
+  - mcp__linear__save_issue
+  - mcp__linear__list_projects
 ---
 
 # Dev Dispatch — 单 Task 代码执行
@@ -68,7 +70,7 @@ allowed-tools:
 5. **判断是否继续**：
    - 修复成功 → 退出循环，进入 Phase 3
    - 修复失败但还有尝试次数 → 回到步骤 1
-   - 达到最大尝试次数（3 次）→ 停止，记录所有尝试和失败原因
+   - 达到最大尝试次数（3 次）→ **触发升级机制（Phase 2b）**
 
 ```
 **🔧 调试记录**
@@ -78,6 +80,71 @@ allowed-tools:
 | 1 | {error} | {fix} | ✅/❌ |
 | 2 | ... | ... | ... |
 ```
+
+### Phase 2b：3 轮失败升级（自动触发）
+
+当 Phase 2 调试循环耗尽 3 次尝试仍未修复时，**立即执行以下升级流程**：
+
+1. **创建 bug issue**（通过 Linear MCP）：
+
+   ```python
+   # 获取主任务的 project 信息
+   parent_project_id = 主任务.project.id  # 从传入的上下文中获取
+
+   # 创建 bug issue
+   mcp__linear__save_issue(
+     title="[BUG] {原 Task 标题} — {失败现象简述}",
+     description=f"""## 背景
+
+   该 bug 在执行子任务时产生，当前模型连续 3 轮修复失败，需要更高推理能力的模型介入。
+
+   **父任务**: {PARENT_ISSUE_ID} — {PARENT_ISSUE_TITLE}
+   **子任务**: {TASK_TITLE}
+   **失败模型**: {当前执行模型名称}
+
+   ## 诊断记录
+
+   | 轮次 | 错误描述 | 修复尝试 | 结果 |
+   |------|----------|----------|------|
+   | 1 | {error_1} | {fix_1} | ❌ |
+   | 2 | {error_2} | {fix_2} | ❌ |
+   | 3 | {error_3} | {fix_3} | ❌ |
+
+   ## 根因分析
+
+   {root_cause_summary}
+
+   ## 建议
+
+   请使用 **opus 模型**重新执行此任务，当前模型推理能力不足以解决此问题。
+
+   ## 工作目录
+
+   {WORKTREE_PATH}
+   """,
+     team="{从主任务中获取的 team}",
+     project=parent_project_id,
+     labels=["bug", "escalation"],
+     parent=PARENT_ISSUE_ID  # 挂为父任务的子 issue
+   )
+   ```
+
+2. **返回升级结果**（不返回失败，而是返回升级状态）：
+
+   ```
+   **🔄 Task 升级**
+
+   - 失败原因: {root cause}
+   - 已尝试修复: 3 轮（详见调试记录）
+   - 升级 Bug: {新创建的 bug issue identifier}
+   - 建议: 请使用 opus 模型重新派发此任务
+   - 调试记录: {表格}
+   ```
+
+3. **project-lead 收到此结果后的处理**：
+   - 将当前子任务状态标记为阻塞（在 Linear 评论中记录）
+   - 在主任务评论中说明升级情况
+   - 等待 Human 决定是否用 opus 模型重新派发
 
 ### Phase 3：提交
 
