@@ -197,17 +197,20 @@ PROJECT_ID=$(issue.project.id)       # 从主任务 issue 中直接读取
 - **标题格式**：`+++ {emoji} {Agent名称} | {内容总结} | 触发：{如何触发的} +++`
 
 **如何获取当前 Agent 名称：**
-- 使用环境变量 `$CLAUDE_CODE_AGENT` 获取当前 agent 的名称
-- 例如：`AGENT_NAME="${CLAUDE_CODE_AGENT:-unknown}"`
-- Agent 写评论时用自己的名称，不需要枚举，动态填写即可
+- ⚠️ **不要使用 `$CLAUDE_CODE_AGENT`**，该环境变量是进程级的，所有 subagent 共享同一个值（通常是 "project-lead"）
+- ✅ **直接使用你在 prompt 中被定义的名称**，例如：
+  - 如果 prompt 说"你是 PRD Agent"，就用 "PRD Agent"
+  - 如果 prompt 说"你是 UX Agent"，就用 "UX Agent"
+  - 如果 prompt 说"你是 TRD Agent"，就用 "TRD Agent"
+  - 如果 prompt 说"你是 repo-worker"，就用 "repo-worker"
 
 **示例：**
-```bash
-# 在 bash 中获取 agent 名称
-AGENT_NAME="${CLAUDE_CODE_AGENT:-unknown}"
+```markdown
+# PRD Agent 写评论时，直接使用硬编码名称
++++ 📋 PRD Agent | 需求分析总结 | 触发：Human 创建 issue 后自动执行
 
-# 生成折叠区块标题
-echo "+++ 📋 ${AGENT_NAME} | 需求分析总结 | 触发：Human 创建 issue 后自动执行"
+# UX Agent 写评论时，直接使用硬编码名称
++++ 🎨 UX Agent | 用户体验方案 | 触发：PRD 完成后自动执行
 ```
 
 **折叠区块内容要求：**
