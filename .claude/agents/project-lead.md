@@ -358,22 +358,49 @@ Skill("iterm2-badge", "MAK-301:添加changelog页面 [Todo]")
     🔗 **Production**: {production_url}
     ```
 20. **⛔ 不主动标记 Done**：输出汇总后停止，等待 Human 明确说 "done"。
-    Human 确认后执行收尾：
-    - 将主任务状态改为"Done"，**同步更新 iTerm2 Badge**
-    - **更新标题追加完成时间**：
-      ```bash
-      TZ=Asia/Shanghai date "+%Y-%m-%d-%H-%M"
-      # 调用 mcp__linear__save_issue(id, title="原标题 [2026-05-10-23-31]")
-      ```
-    - **清理 Worktree**：
-      ```bash
-      cd "$REPO_ROOT"
-      git worktree remove "$WORKTREE_NAME"
-      git branch -d "feature/$ISSUE_ID"
-      git checkout release && git pull
-      ```
 
-> 清理 Worktree 已合并到步骤 20 的收尾流程中（Human 确认 Done 后执行）。
+#### 第七步：Human 确认后的收尾流程
+
+Human 说 "done" 后，按顺序执行以下操作：
+
+**7a. 合并验证门控**
+```bash
+PR_STATE=$(gh pr view "feature/$ISSUE_ID" --json state --jq '.state')
+# 必须为 "MERGED"，否则中止收尾
+```
+- 仅 `MERGED` 状态允许继续
+- `OPEN` → 停止，输出提示 `⏳ PR 尚未合并，请 Human 在 Linear/GitHub 中合并 PR`
+- `CLOSED`（未合并）→ 停止，输出提示 `⚠️ PR 已关闭但未合并，请 Human 确认意图`
+- **严禁跳过此验证直接标记 Done**
+
+**7b. 标记 Done + 更新标题**
+```bash
+# 获取北京时间
+TZ=Asia/Shanghai date "+%Y-%m-%d-%H-%M"
+# 输出示例: 2026-05-10-23-31
+```
+调用 `mcp__linear__save_issue`：
+- `state` → "Done"
+- `title` → "原标题 [2026-05-10-23-31]"
+同步更新 iTerm2 Badge → `[Done]`
+
+**7c. 清理 Worktree**
+```bash
+cd "$REPO_ROOT"
+# 删除 worktree
+git worktree remove "$WORKTREE_NAME"
+# 删除本地 feature 分支
+git branch -d "feature/$ISSUE_ID"
+# 切换回 release 并拉取最新
+git checkout release && git pull
+```
+
+**7d. 输出最终汇总**
+```
+✅ **{ISSUE_ID} 已完成**
+📋 **linear://issue/{ISSUE_ID}**
+🔗 **Production**: {production_url}
+```
 
 ## Anti-Duplicate 防重复
 
