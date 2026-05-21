@@ -275,6 +275,30 @@ Skill("iterm2-badge", "MAK-301:添加changelog页面 [Todo]")
    ```
    **⚠️ 同一 MAK 任务 ID 下的所有代码变更必须提交到同一个 feature 分支、同一个 PR。** 不要拆成多个 PR。如果 PR 已创建但未合并，后续变更应追加到同一分支，PR 会自动更新。
 
+10. **更新 PR 标题和描述**（每次 push 后、通知 Human 前必须执行）：
+    根据实际 diff 内容更新 PR，确保 Human review 时看到准确的变更说明：
+    ```bash
+    cd "$WORKTREE_PATH"
+    # 查看完整 diff 以编写准确描述
+    git diff release..HEAD --stat
+    # 更新 PR 标题和描述
+    gh api repos/$GITHUB_REPO/pulls/{PR_NUMBER} -X PATCH \
+      -f title="$ISSUE_ID <基于实际变更的描述性标题>" \
+      -f body="$(cat <<'EOF'
+    ## Summary
+    <基于实际 diff 的变更汇总，分点列出>
+
+    ## Changes
+    | 文件 | 变更 |
+    |------|------|
+    | `<file>` | <具体改了什么> |
+
+    🤖 Generated with [Claude Code](https://claude.com/claude-code)
+    EOF
+    )"
+    ```
+    > ⚠️ `gh pr edit` 遇到 GraphQL projectCards 错误时，fallback 到 `gh api` 直接调用。
+
 #### 第四步半：获取 Preview URL
 9b. PR 创建后，启动**后台定时检查**获取 Vercel preview URL（非阻塞）：
     ```bash
