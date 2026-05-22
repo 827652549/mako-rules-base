@@ -63,14 +63,15 @@ echo ""
 VALID_PLATFORMS="nextjs ios expo python base"
 
 select_platform() {
-  echo "请选择项目平台："
-  echo "  1) nextjs  — Next.js App Router（Vercel 部署）"
-  echo "  2) ios     — iOS 原生项目（Swift / SwiftUI）"
-  echo "  3) expo    — Expo / React Native"
-  echo "  4) python  — Python 后端（FastAPI）"
-  echo "  5) base    — 仅通用规范（无平台专属）"
-  echo ""
-  read -r -p "请输入编号 [1-5]: " choice
+  echo "请选择项目平台：" >&2
+  echo "  1) nextjs  — Next.js App Router（Vercel 部署）" >&2
+  echo "  2) ios     — iOS 原生项目（Swift / SwiftUI）" >&2
+  echo "  3) expo    — Expo / React Native" >&2
+  echo "  4) python  — Python 后端（FastAPI）" >&2
+  echo "  5) base    — 仅通用规范（无平台专属）" >&2
+  echo "" >&2
+  printf "请输入编号 [1-5]: " >&2
+  read -r choice
   case "$choice" in
     1) echo "nextjs" ;;
     2) echo "ios" ;;
